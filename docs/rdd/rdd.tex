@@ -46,7 +46,7 @@
 \begin{center}
   {\LARGE \textbf{Three-Dimensional Choreographic Orbits:\\[4pt]
   A Point-Group Classification Programme}}\\[1.6em]
-  {\large \textcolor{muted}{Research Design Document — v0.1}}\\[0.6em]
+  {\large \textcolor{muted}{Research Design Document — v0.2}}\\[0.6em]
   {\normalsize \textcolor{muted}{e5bed97b3349 \quad\textbullet\quad March 2026}}
 \end{center}
 
@@ -118,8 +118,15 @@ are not merely planar solutions embedded in $\R^3$ — is conspicuously
 underdeveloped. The obstacles are partly technical (the symmetry group is
 richer and harder to parameterise) and partly conceptual (it is less
 obvious which topological sectors of the loop space admit minimisers).
-We identify this as the central open problem motivating the present
-programme.
+The companion Mathematical Framework document \cite{MathFrame2026}
+resolves the conceptual question: Propositions~4.1--4.3 and the summary
+table in that document determine \emph{precisely} which three-dimensional
+point groups admit genuinely non-planar choreographies and which force
+the orbit into a plane. Non-planarity is not an empirical question to
+be settled numerically; it is a structural consequence of the
+representation theory of $G$ on the Fourier coefficient space.
+We identify the systematic search over the non-planar symmetry classes
+as the central programme motivating this work.
 
 \subsection{Chemistry as organising principle}
 
@@ -276,8 +283,13 @@ For each point group $G$ compatible with small $N$, we:
 
 Extend to $N = 6, 12$ with tetrahedral and octahedral symmetry groups,
 exploiting the stronger constraints to keep the search space tractable.
-Explore icosahedral candidates at $N = 12$ and $N = 60$ as a high-risk,
-high-reward target.
+Extend further to icosahedral symmetry at $N = 12$ and $N = 60$.
+The \emph{dimensional miracle} established in MathFrame \cite{MathFrame2026}
+§4.6 shows that the search-space dimension at fixed truncation ratio
+$K/N$ is independent of the group order $|G|$: icosahedral constraints
+impose no greater computational burden than tetrahedral ones.
+This formally justifies the icosahedral case as a primary target
+rather than a speculative extension.
 
 \subsection{Phase 3: Knot classification}
 
@@ -299,8 +311,8 @@ marginally stable orbits, explore KAM tori numerically via surface-of-section.
 
 Produce publication-quality renders: orbital traces as tubes in $\R^3$
 with point-group symmetry axes shown explicitly, spacetime braids rendered
-as three-dimensional knot diagrams, and animated GIFs of the full
-choreographic motion for public dissemination.
+as three-dimensional knot diagrams, and high-fidelity video renders
+(4K/60fps, H.264) of the full choreographic motion for public dissemination.
 
 % ---------- 5. EXPECTED OUTPUTS ----------
 \section{Expected Outputs}
@@ -391,6 +403,11 @@ Arch.\ Rational Mech.\ Anal.\ \textbf{184} (2007), 465--493.
 F.~Schaufelberger et al.,
 \textit{Synthesis of molecular knots},
 Chem.\ Soc.\ Rev.\ \textbf{50} (2021), 3473--3500.
+
+\bibitem{MathFrame2026}
+e5bed97b3349,
+\textit{Three-Dimensional Choreographic Orbits: Mathematical Framework},
+\texttt{orbraid} repository, \texttt{docs/mathframe/mathframe.pdf} (2026).
 
 \end{thebibliography}
 

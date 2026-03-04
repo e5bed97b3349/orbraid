@@ -72,7 +72,7 @@
 \begin{center}
   {\LARGE \textbf{Three-Dimensional Choreographic Orbits:\\[4pt]
   Computational Specification}}\\[1.6em]
-  {\large \textcolor{muted}{CompSpec — v0.1 \quad|\quad Companion to RDD v0.1}}\\[0.6em]
+  {\large \textcolor{muted}{CompSpec — v0.2 \quad|\quad Companion to RDD v0.2 and MathFrame v0.1}}\\[0.6em]
   {\normalsize \textcolor{muted}{e5bed97b3349 \quad\textbullet\quad March 2026}}
 \end{center}
 
@@ -191,11 +191,12 @@ $z$-axis and a reflection $\sigma_v$ through the $xz$-plane.  With $N = 3$
 and phase shift $\sigma = 1$:
 
 \begin{enumerate}[leftmargin=1.8em]
-  \item $R_3 \cdot \gamma(t) = R_3\,\gamma(t - T/3)$: imposes on mode $k$ that
-        $R_3 \bfa_k = \bfa_k \cos(2\pi k/3) + \bfb_k \sin(2\pi k/3)$ and the
-        analogous relation for $\bfb_k$.  Only modes $k \equiv 0 \pmod{3}$ survive
-        in the $xy$-components; the $z$-components of modes $k \not\equiv 0
-        \pmod 3$ are forced to zero.
+  \item $R_3 \cdot \gamma(t) = R_3\,\gamma(t - T/3)$: in the helicity basis
+        $z_\pm = x \pm iy$, mode $k$ acquires phase $e^{2\pi i(1-k)/3}$ in the
+        $xy$-plane and $e^{-2\pi ik/3}$ on the $z$-axis.  Survival requires
+        these phases to equal 1, giving $k \equiv 1 \pmod{3}$ for
+        $xy$-components and $k \equiv 0 \pmod{3}$ for $z$-components
+        (MathFrame Proposition~4.1).
   \item $\sigma_v \cdot \gamma(t) = \sigma_v \gamma(t)$: reflects $y \to -y$,
         forcing $(\bfa_k)_y = 0$ and $(\bfb_k)_x = 0$ for all surviving modes.
 \end{enumerate}
@@ -205,17 +206,96 @@ factor $\approx 2/3$ relative to the unconstrained $6K$-dimensional space.
 Icosahedral constraints with $N = 12$ reduce the space by factor $\approx
 11/12$, leaving $O(K)$ free parameters at fixed order.
 
-\subsubsection{Implementation: constraint matrix $P_G$}
+\subsubsection{Implementation: mode-selection projector}
 
-For each symmetry group $G$, we precompute a projection matrix $P_G$ such
-that $\theta \in \Fix(G)$ iff $\theta = P_G \theta$.  This matrix is computed
-once at initialisation via the Reynolds operator:
-\[
-  P_G = \frac{1}{|G|} \sum_{g \in G} \rho(g).
-\]
-All initialisations are drawn as $\theta = P_G z$ for $z \sim \mathcal{N}(0,
-\sigma^2 I)$, guaranteeing they lie in $\Fix(G)$.  Gradient steps are
-projected back via $\nabla \leftarrow P_G \nabla$ after each L-BFGS update.
+Rather than assembling the Reynolds operator $P_G = |G|^{-1}\sum_{g\in G}\rho(g)$
+at cost $O(|G|\,K^2)$, we exploit the explicit mode-selection rules derived in
+MathFrame~\cite{MathFrame2026} Propositions~4.1--4.3.  For every point group
+$G$ the fixed-point subspace $\Fix(G)$ is spanned by a subset of Fourier modes
+that can be identified by a single modular-arithmetic lookup per mode index.
+The resulting \texttt{build\_projector} routine runs in $O(K)$ and returns a
+boolean mask rather than a dense matrix.
+
+\begin{lstlisting}[style=python, caption={Mode-selection projector (MathFrame §4).}]
+import jax.numpy as jnp
+import numpy as np
+
+# Mode-selection rules derived from MathFrame Propositions 4.1-4.3.
+# Each entry: (xy_residue, z_residue, modulus)
+# Mode k survives in xy iff k % modulus == xy_residue  (None = never)
+# Mode k survives in z  iff k % modulus == z_residue   (None = never)
+_MODE_RULES = {
+    # Cyclic / pyramidal: 3D orbits possible
+    "Cn":  lambda n: (1 % n, 0, n),
+    "Cnv": lambda n: (1 % n, 0, n),
+    # Dihedral / prismatic: z forced to zero (no 3D)
+    "Dn":  lambda n: (1 % n, None, n),
+    "Dnh": lambda n: (1 % n, None, n),
+    # Cubic: sparse mode structure, 3D possible
+    "T":   lambda _: (1, 0, 3),
+    "Td":  lambda _: (1, 0, 3),
+    "O":   lambda _: (1, 0, 4),
+    "Oh":  lambda _: (1, 0, 4),
+    "I":   lambda _: (1, 0, 5),
+    "Ih":  lambda _: (1, 0, 5),
+}
+
+def build_projector(group: str, n: int, K: int):
+    """
+    Return boolean masks (xy_mask, z_mask) of shape (K,) indicating which
+    Fourier modes k=1..K survive the symmetry constraint for the given group.
+
+    Parameters
+    ----------
+    group : str   Schoenflies symbol, e.g. 'Cnv', 'T', 'Oh'
+    n     : int   Fold number (ignored for cubic groups)
+    K     : int   Truncation order
+
+    Returns
+    -------
+    xy_mask : np.ndarray[bool], shape (K,)
+    z_mask  : np.ndarray[bool], shape (K,)
+    """
+    rule = _MODE_RULES[group](n)
+    xy_res, z_res, mod = rule
+    ks = np.arange(1, K + 1)
+    xy_mask = (ks % mod == xy_res) if xy_res is not None \
+              else np.zeros(K, dtype=bool)
+    z_mask  = (ks % mod == z_res)  if z_res  is not None \
+              else np.zeros(K, dtype=bool)
+    return xy_mask, z_mask
+
+def pack_free(a_coeffs, b_coeffs, xy_mask, z_mask):
+    """Extract the free (unconstrained) Fourier coefficients into a 1-D vector."""
+    xy_a = a_coeffs[xy_mask, :2].ravel()   # x,y components of cos modes
+    xy_b = b_coeffs[xy_mask, :2].ravel()   # x,y components of sin modes
+    z_a  = a_coeffs[z_mask,  2]            # z component of cos modes
+    z_b  = b_coeffs[z_mask,  2]            # z component of sin modes
+    return np.concatenate([xy_a, xy_b, z_a, z_b])
+
+def unpack_free(theta_free, K, xy_mask, z_mask):
+    """Reconstruct full (K,2,3) coefficient array from free parameters."""
+    n_xy = int(xy_mask.sum())
+    n_z  = int(z_mask.sum())
+    xy_a = theta_free[:2*n_xy].reshape(n_xy, 2)
+    xy_b = theta_free[2*n_xy:4*n_xy].reshape(n_xy, 2)
+    z_a  = theta_free[4*n_xy:4*n_xy+n_z]
+    z_b  = theta_free[4*n_xy+n_z:]
+    a = np.zeros((K, 3))
+    b = np.zeros((K, 3))
+    a[xy_mask, :2] = xy_a
+    b[xy_mask, :2] = xy_b
+    a[z_mask,   2] = z_a
+    b[z_mask,   2] = z_b
+    return jnp.array(np.stack([a, b], axis=1))   # (K, 2, 3)
+\end{lstlisting}
+
+The optimiser operates entirely on the \emph{free} parameter vector
+$\theta_{\mathrm{free}}$ whose dimension is $\dim\Fix(G)$ (typically $O(K)$
+with a group-dependent prefactor, as tabulated in §2.2.1).  Because the
+parametrisation is intrinsic to $\Fix(G)$, no projection step is required
+after gradient updates: every point in the free-parameter space corresponds
+to a valid symmetry-constrained orbit.
 
 \subsection{Action functional in JAX}
 
@@ -571,6 +651,11 @@ in \textit{European Congress of Mathematics}, Birkh\"auser, Basel, 2001, pp.\ 10
 R.~S.~Palais,
 \textit{The principle of symmetric criticality},
 Commun.\ Math.\ Phys.\ \textbf{69} (1979), 19--30.
+
+\bibitem{MathFrame2026}
+e5bed97b3349,
+\textit{orbraid Mathematical Framework},
+Technical Report v0.1, \url{https://github.com/e5bed97b3349/orbraid}, 2026.
 
 \end{thebibliography}
 
