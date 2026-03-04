@@ -1,0 +1,84 @@
+# orbraid — reproducible JAX/CUDA environment
+# CompSpec v0.2 §1.2 — see environment/SETUP.md for full installation guide.
+#
+# Platform : WSL2 Ubuntu 24.04 LTS, x86_64
+# GPU      : NVIDIA RTX 5090 (Blackwell GB202, SM_100, 32 GB VRAM)
+# CUDA     : passthrough via Windows NVIDIA driver ≥ 572.16 — DO NOT install
+#            the CUDA toolkit inside WSL2; the driver stub handles libcuda.so.
+#
+# JAX is installed via pip (jax[cuda12]) because conda-forge does not carry
+# the CUDA-enabled wheels.  jax[cuda12] bundles its own CUDA 12.x runtime;
+# no system-level CUDA install is needed inside WSL2.
+#
+# RTX 5090 (SM_100) requires jax[cuda12] ≥ 0.4.35 and CUDA 12.8+.
+# The floor in requirements.txt (0.4.25) pre-dates Blackwell; we raise it here.
+#
+# ── Create environment ───────────────────────────────────────────────────────
+#   conda env create -f environment/environment.yml
+#
+# ── Regenerate lock file (after changing this file) ─────────────────────────
+#   conda-lock lock --mamba -p linux-64 \
+#       -f environment/environment.yml \
+#       -k unified --lockfile environment/conda-lock.yml
+#
+# ── Reproduce from lock file (bit-for-bit, one command) ─────────────────────
+#   conda-lock install --name orbraid environment/conda-lock.yml
+# ────────────────────────────────────────────────────────────────────────────
+
+name: orbraid
+
+channels:
+  - conda-forge
+  - nodefaults        # conda-forge only; never fall back to defaults
+
+dependencies:
+  # ── Python runtime ─────────────────────────────────────────────────────────
+  - python=3.11       # 3.11 is the stable JAX target; 3.12 support is newer
+  - pip>=24.0
+
+  # ── Core numerics ──────────────────────────────────────────────────────────
+  - numpy>=1.26,<3    # JAX 0.4.x is compatible with both numpy 1.x and 2.x
+  - scipy>=1.13       # Newton–Raphson refinement, eigenvalue solvers (§4)
+
+  # ── Visualisation ──────────────────────────────────────────────────────────
+  # pyvista + vtk from conda-forge gives correct Mesa/VTK linkage for headless
+  # off-screen rendering in WSL2 via pyvista.start_xvfb() (CompSpec §7.2).
+  - pyvista>=0.44
+  - vtk>=9.3
+  - xvfbwrapper>=0.2.9   # needed by pyvista.start_xvfb() in headless WSL2
+
+  # ── HDF5 catalogue storage ─────────────────────────────────────────────────
+  - h5py>=3.11        # orbit catalogue schema (CompSpec §8)
+
+  # ── Video export ───────────────────────────────────────────────────────────
+  - ffmpeg>=6.0       # the ffmpeg binary; ffmpeg-python wrapper added via pip
+
+  # ── Development / testing ──────────────────────────────────────────────────
+  - pytest>=8.0
+  - pytest-xdist>=3.5
+  - black>=24.0
+  - ruff>=0.4
+  - ipykernel>=6.29
+  - jupyterlab>=4.1
+  - tqdm>=4.66
+
+  # ── Lock-file tooling ──────────────────────────────────────────────────────
+  - conda-lock>=2.5   # needed only to regenerate conda-lock.yml
+
+  # ── pip-only packages ──────────────────────────────────────────────────────
+  # These are not available as conda-forge CUDA wheels; pip handles them.
+  - pip:
+    # JAX — CUDA 12 wheels are pip-only.
+    # jax[cuda12] bundles nvidia-cuda-* runtime packages automatically.
+    # SM_100 (Blackwell/RTX 5090) requires ≥ 0.4.35.
+    - "jax[cuda12]>=0.4.35"
+
+    # Optimisation (L-BFGS and Adam) — CompSpec §3.2
+    - "optax>=0.2.2"
+
+    # Knot theory — Alexander polynomial, HOMFLY-PT, hyperbolic volume (§5)
+    # SnapPy ships self-contained Linux wheels; no system deps required.
+    - "snappy>=3.1"
+
+    # ffmpeg Python wrapper (the binary is supplied by the ffmpeg conda pkg)
+    - "ffmpeg-python>=0.2.0"
