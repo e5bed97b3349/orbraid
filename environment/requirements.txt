@@ -1,0 +1,28 @@
+# orbraid — pinned dependencies (CompSpec v0.2 §1.2)
+# Install on CUDA 12 workstation:
+#   pip install -r requirements.txt
+#
+# JAX must be installed first to ensure the CUDA wheels are resolved correctly:
+#   pip install "jax[cuda12]>=0.4.25"
+#   pip install -r requirements.txt
+
+# ── Core autodiff / GPU ────────────────────────────────────────────────────
+jax[cuda12]>=0.4.25
+jaxlib>=0.4.25          # pulled in by jax[cuda12], pinned for reproducibility
+
+# ── Optimisation ───────────────────────────────────────────────────────────
+optax>=0.2.2            # L-BFGS and Adam optimisers
+
+# ── Numerical / scientific ─────────────────────────────────────────────────
+numpy>=1.26
+scipy>=1.13             # Newton-Raphson refinement, eigenvalue solvers
+
+# ── Knot theory ────────────────────────────────────────────────────────────
+snappy>=3.1             # Alexander polynomial, HOMFLY-PT, hyperbolic volume
+
+# ── Visualisation / video ──────────────────────────────────────────────────
+pyvista>=0.44           # 3-D tube renders, symmetry-axis overlays
+ffmpeg-python>=0.2.0    # 4K/60fps H.264 video export
+
+# ── Catalogue storage ──────────────────────────────────────────────────────
+h5py>=3.11              # HDF5 orbit catalogue
