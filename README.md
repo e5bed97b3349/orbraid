@@ -21,8 +21,8 @@ The spacetime trace of each orbit is a closed curve in S³ whose knot type — c
 ```
 orbraid/
 ├── docs/
-│   ├── rdd/            Research Design Document (v0.1)
-│   ├── compspec/       Computational Specification (v0.1)
+│   ├── rdd/            Research Design Document (v0.2)
+│   ├── compspec/       Computational Specification (v0.3)
 │   └── mathframe/      Mathematical Framework (v0.1)
 ├── src/
 │   └── orbraid/        Python source (JAX implementation)
@@ -34,9 +34,9 @@ orbraid/
 
 | Document | Description | Version |
 |----------|-------------|---------|
-| [RDD](docs/rdd/rdd.pdf) | Research design, motivation, methodology overview | v0.1 |
+| [RDD](docs/rdd/rdd.pdf) | Research design, motivation, methodology overview | v0.2 |
 | [MathFrame](docs/mathframe/mathframe.pdf) | Full mathematical framework: symmetry constraints, existence theory, knot theory, Floquet–Krein stability | v0.1 |
-| [CompSpec](docs/compspec/compspec.pdf) | Computational specification: JAX implementation, algorithms, catalogue schema | v0.1 |
+| [CompSpec](docs/compspec/compspec.pdf) | Computational specification: JAX implementation, algorithms, catalogue schema | v0.3 |
 
 ## Status
 
@@ -66,6 +66,21 @@ ffmpeg-python>=0.2
 numpy>=1.26
 h5py>=3.11
 ```
+
+## Contributing — commit checklist
+
+Before committing, run through this list:
+
+1. `pytest tests/ -v` — all tests pass
+2. `git status` — review what's staged, unstaged, and untracked
+3. `git diff` — read every changed line; no debug prints, no secrets
+4. `git add <specific files>` — stage only what belongs in this commit (never `git add .`)
+5. Check version refs are consistent: `pyproject.toml`, `CHANGELOG.md`, doc headers
+6. Write a [conventional commit](https://www.conventionalcommits.org/) message (`feat:`, `fix:`, `docs:`, `chore:`)
+7. `git commit -m "..."` — commits are GPG-signed automatically
+8. `git log --oneline -3` — verify the commit looks right
+9. `git push` — push to `origin/main`
+10. If the commit closes a GitHub issue, close it manually or use `closes #N` in the message
 
 ## Citation
 

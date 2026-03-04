@@ -1,4 +1,4 @@
-# orbraid — pinned dependencies (CompSpec v0.2 §1.2)
+# orbraid — pinned dependencies (CompSpec v0.3 §1.2)
 # Install on CUDA 12 workstation:
 #   pip install -r requirements.txt
 #

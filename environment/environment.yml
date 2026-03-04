@@ -1,5 +1,5 @@
 # orbraid — reproducible JAX/CUDA environment
-# CompSpec v0.2 §1.2 — see environment/SETUP.md for full installation guide.
+# CompSpec v0.3 §1.2 — see environment/SETUP.md for full installation guide.
 #
 # Platform : WSL2 Ubuntu 24.04 LTS, x86_64
 # GPU      : NVIDIA RTX 5090 (Blackwell GB202, SM_100, 32 GB VRAM)

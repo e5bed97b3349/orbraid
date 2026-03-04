@@ -72,7 +72,7 @@
 \begin{center}
   {\LARGE \textbf{Three-Dimensional Choreographic Orbits:\\[4pt]
   Computational Specification}}\\[1.6em]
-  {\large \textcolor{muted}{CompSpec — v0.2 \quad|\quad Companion to RDD v0.2 and MathFrame v0.1}}\\[0.6em]
+  {\large \textcolor{muted}{CompSpec — v0.3 \quad|\quad Companion to RDD v0.2 and MathFrame v0.1}}\\[0.6em]
   {\normalsize \textcolor{muted}{e5bed97b3349 \quad\textbullet\quad March 2026}}
 \end{center}
 
@@ -336,9 +336,9 @@ def build_action(N: int, K: int, M: int, G: float = 1.0, m: float = 1.0):
             cos_s = jnp.cos(2 * jnp.pi * ks * s)   # (K,)
             sin_s = jnp.sin(2 * jnp.pi * ks * s)
             gamma_s = jnp.einsum('k,ki,kc->ic', cos_s, cos_t, coeff[:,0,:]) \
-                    + jnp.einsum('k,ki,kc->ic', sin_s, cos_t, coeff[:,0,:]) \
+                    + jnp.einsum('k,ki,kc->ic', sin_s, sin_t, coeff[:,0,:]) \
                     + jnp.einsum('k,ki,kc->ic', cos_s, sin_t, coeff[:,1,:]) \
-                    + jnp.einsum('k,ki,kc->ic', sin_s, sin_t, coeff[:,1,:])
+                    - jnp.einsum('k,ki,kc->ic', sin_s, cos_t, coeff[:,1,:])
             diff = gamma - gamma_s                      # (M, 3)
             r = jnp.sqrt(jnp.sum(diff**2, axis=-1) + 1e-14)
             return -G * m**2 * jnp.mean(1.0 / r)
