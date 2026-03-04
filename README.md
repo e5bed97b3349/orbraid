@@ -78,9 +78,10 @@ Before committing, run through this list:
 5. Check version refs are consistent: `pyproject.toml`, `CHANGELOG.md`, doc headers
 6. Write a [conventional commit](https://www.conventionalcommits.org/) message (`feat:`, `fix:`, `docs:`, `chore:`)
 7. `git commit -m "..."` — commits are GPG-signed automatically
-8. `git log --oneline -3` — verify the commit looks right
+8. `git log --oneline` — verify the commit looks right
 9. `git push` — push to `origin/main`
 10. If the commit closes a GitHub issue, close it manually or use `closes #N` in the message
+11. If this commit completes a milestone, tag it: `git tag -a vX.Y.Z -m "description"` then `git push origin vX.Y.Z`
 
 ## Citation
 
