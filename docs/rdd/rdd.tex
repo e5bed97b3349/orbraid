@@ -1,0 +1,397 @@
+\documentclass[12pt, a4paper]{article}
+
+\usepackage{amsmath, amssymb, amsthm}
+\usepackage{geometry}
+\usepackage{hyperref}
+\usepackage{titlesec}
+\usepackage{parskip}
+\usepackage{microtype}
+\usepackage{lmodern}
+\usepackage{xcolor}
+\usepackage{booktabs}
+\usepackage{enumitem}
+
+\geometry{margin=1.2in}
+
+\definecolor{deepblue}{RGB}{20, 40, 100}
+\definecolor{muted}{RGB}{90, 90, 90}
+
+\hypersetup{
+  colorlinks=true,
+  linkcolor=deepblue,
+  urlcolor=deepblue,
+  citecolor=deepblue
+}
+
+\titleformat{\section}{\large\bfseries\color{deepblue}}{{\thesection}}{1em}{}
+\titleformat{\subsection}{\normalsize\bfseries\color{deepblue}}{{\thesubsection}}{1em}{}
+
+\theoremstyle{definition}
+\newtheorem{definition}{Definition}
+\newtheorem{question}{Research Question}
+
+% Notation shortcuts
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\N}{\mathbb{N}}
+\newcommand{\q}{\mathbf{q}}
+\newcommand{\Action}{\mathcal{A}}
+\newcommand{\Lag}{\mathcal{L}}
+\newcommand{\Sym}{\mathrm{Sym}}
+\newcommand{\SO}{\mathrm{SO}}
+\newcommand{\Z}{\mathbb{Z}}
+
+\begin{document}
+
+% ---------- TITLE ----------
+\begin{center}
+  {\LARGE \textbf{Three-Dimensional Choreographic Orbits:\\[4pt]
+  A Point-Group Classification Programme}}\\[1.6em]
+  {\large \textcolor{muted}{Research Design Document — v0.1}}\\[0.6em]
+  {\normalsize \textcolor{muted}{e5bed97b3349 \quad\textbullet\quad March 2026}}
+\end{center}
+
+\vspace{1.2em}
+\noindent\rule{\textwidth}{0.4pt}
+\vspace{0.4em}
+
+% ---------- ABSTRACT ----------
+\begin{abstract}
+\noindent
+We propose a systematic programme to discover, classify, and characterise
+three-dimensional equal-mass choreographic solutions to the Newtonian
+$N$-body problem. A \emph{choreographic orbit} is a periodic solution in
+which all $N$ bodies traverse a single closed curve, equally spaced in
+phase. While the two-dimensional case has been surveyed extensively — most
+notably by Sim\'o (2002) — fully three-dimensional choreographies remain
+largely unexplored. Our programme organises the search space by the
+three-dimensional point-group symmetry of the orbit, imports the
+classification machinery of molecular symmetry into gravitational dynamics,
+and characterises each discovered orbit by the knot type of its spacetime
+trace. We expect the resulting catalogue to reveal a rich correspondence
+between symmetry class, knot invariant, and action value, and to draw
+explicit connections to the emerging literature on mechanically synthesised
+molecular knots.
+\end{abstract}
+
+\noindent\rule{\textwidth}{0.4pt}
+\vspace{1em}
+
+% ---------- 1. BACKGROUND ----------
+\section{Background and Motivation}
+
+\subsection{The choreographic orbit}
+
+Consider $N$ bodies of equal mass $m$ moving in $\R^3$ under mutual
+Newtonian gravity. A \emph{choreographic solution} is a periodic orbit
+$\q_i(t) \in \R^3$ ($i = 1, \ldots, N$, period $T$) such that there exists
+a single closed curve $\gamma \subset \R^3$ and a phase shift $\tau = T/N$
+with
+\[
+  \q_i(t) = \q_1\!\left(t + (i-1)\,\tau\right), \quad i = 1, \ldots, N.
+\]
+All bodies follow the same spatial curve; they are simply offset in time.
+The solution is therefore entirely specified by the single curve
+$\gamma$ and its parameterisation.
+
+\subsection{Historical context}
+
+The existence of non-trivial choreographic solutions was not established
+rigorously until 2000, when Chenciner and Montgomery \cite{CM2000} proved
+the existence of the figure-eight solution for $N = 3$ by showing it
+minimises the Lagrangian action over a topologically constrained loop space.
+This variational proof transformed the problem: rather than searching phase
+space by continuation or shooting, one seeks \emph{minima of an action
+functional subject to symmetry constraints}.
+
+Sim\'o \cite{Simo2002} immediately exploited this framework numerically,
+discovering hundreds of planar ($\R^2$) choreographies for small $N$ and
+organising them by their discrete symmetry groups in the plane. This
+catalogue constitutes the current state of the art for the two-dimensional
+case. Subsequent work has extended the analysis to figure-eight stability
+\cite{Chenciner2005}, choreographies with non-equal masses, and related
+classes of symmetric periodic orbits (hip-hop solutions, $p/q$-choreographies).
+
+\subsection{The three-dimensional gap}
+
+The extension to genuine three-dimensional choreographies — orbits that
+are not merely planar solutions embedded in $\R^3$ — is conspicuously
+underdeveloped. The obstacles are partly technical (the symmetry group is
+richer and harder to parameterise) and partly conceptual (it is less
+obvious which topological sectors of the loop space admit minimisers).
+We identify this as the central open problem motivating the present
+programme.
+
+\subsection{Chemistry as organising principle}
+
+The symmetry group of a three-dimensional choreographic orbit is a
+subgroup of $O(3)$ acting on the curve $\gamma$. These are precisely the
+\emph{point groups} familiar from molecular symmetry: $C_n$, $C_{nv}$,
+$C_{nh}$, $D_n$, $D_{nh}$, $D_{nd}$, $T$, $T_d$, $T_h$, $O$, $O_h$,
+$I$, $I_h$. The Sch\"onflies classification, originally developed to
+organise molecular geometry, provides a ready-made taxonomy for three-di\-men\-sional
+choreographies. Orbits with high symmetry (icosahedral $I_h$, octahedral
+$O_h$) impose strong constraints on the curve $\gamma$ that dramatically
+reduce the search space and may guarantee the existence of minimisers
+via symmetric criticality arguments \cite{Palais1979}.
+
+A second bridge to chemistry is topological. The spacetime trace of a
+choreographic orbit — the curve $t \mapsto (\q_1(t), t)$ projected back
+to $\R^3$ after closing the time axis — is a closed curve whose knot type
+is a topological invariant of the orbit. Molecular knot synthesis
+(trefoil knots, Solomon links, torus knots) has undergone rapid
+development \cite{Stoddart2020}; a gravitational analogue in which orbit
+topology is controlled by point-group symmetry would constitute a
+meaningful conceptual contribution to both fields.
+
+% ---------- 2. MATHEMATICAL FRAMEWORK ----------
+\section{Mathematical Framework}
+
+\subsection{Action functional and choreographic constraint}
+
+The Lagrangian action over one period is
+\[
+  \Action[\q_1, \ldots, \q_N]
+  \;=\;
+  \int_0^T \Lag\,dt
+  \;=\;
+  \int_0^T
+  \left[
+    \sum_{i=1}^N \tfrac{m}{2}\,|\dot{\q}_i|^2
+    \;+\;
+    \sum_{i < j} \frac{Gm^2}{|\q_i - \q_j|}
+  \right] dt.
+\]
+Restricting to the choreographic subspace via $\q_i(t) = \q_1(t +
+(i-1)T/N)$ reduces the problem to a single-curve functional
+\[
+  \Action[\gamma]
+  \;=\;
+  \frac{N}{T}\int_0^T
+  \left[
+    \tfrac{m}{2}|\dot\gamma|^2
+    + \frac{1}{N}\sum_{k=1}^{N-1}
+      \frac{Gm^2}{|\gamma(t) - \gamma(t + kT/N)|}
+  \right] dt,
+\]
+where $\gamma : [0,T] \to \R^3$ is $T$-periodic. Critical points of
+$\Action$ on the appropriate Sobolev space $H^1(S^1, \R^3)$ correspond
+to choreographic solutions. Global minimisers in a given homotopy class
+exist whenever collisions can be excluded from that class
+\cite{CM2000, Terracini2004}.
+
+\subsection{Symmetry constraints and reduction}
+
+Let $G \subset O(3) \times \Z/N\Z$ be the symmetry group of the orbit,
+acting on the loop space by simultaneously rotating the curve and permuting
+the bodies. By the Principle of Symmetric Criticality \cite{Palais1979},
+a symmetric critical point of $\Action|_{\mathrm{Fix}(G)}$ is a critical
+point of the full action. This reduces the search to the fixed-point
+subspace $\mathrm{Fix}(G)$, whose dimension is determined by the
+representation theory of $G$ on $H^1(S^1, \R^3)$.
+
+Concretely, for a $C_{3v}$ orbit with $N=3$ bodies, the constraint forces
+$\gamma$ to pass through specific planes and axes, yielding a finite-di\-men\-sional
+initial-condition manifold to search. For icosahedral symmetry with
+$N = 12$ or $N = 60$, the constraints are far stronger and the search space
+dramatically smaller.
+
+\subsection{Knot theory of the spacetime trace}
+
+Define the \emph{spacetime trace} of the choreography as the closed curve
+\[
+  \Gamma : t \mapsto \bigl(\q_1(t),\; t \bmod T\bigr) \;\in\; \R^3 \times S^1.
+\]
+The isotopy class of $\Gamma$ in the complement of the other bodies'
+spacetime traces is a topological invariant. For planar choreographies
+this reduces to a braid word in $B_N$; for three-dimensional ones it is
+a richer object, potentially a knot or link in $S^3$. We will compute
+knot invariants — at minimum the Alexander polynomial and the HOMFLY-PT
+polynomial — for each discovered orbit.
+
+\subsection{Stability}
+
+Linear stability is assessed via Floquet theory: we compute the monodromy
+matrix $M = \Phi(T)$ of the linearised variational equations along the
+orbit and classify eigenvalues as elliptic (on the unit circle), hyperbolic
+(real), or complex-hyperbolic. An orbit is \emph{linearly stable} if all
+eigenvalues lie on the unit circle. We will also compute the first few
+Lyapunov exponents numerically to characterise the nonlinear stability
+basin.
+
+% ---------- 3. RESEARCH QUESTIONS ----------
+\section{Research Questions}
+
+\begin{question}
+For each three-dimensional point group $G$ (Sch\"onflies classification),
+does there exist a choreographic $N$-body orbit with symmetry group
+containing $G$? For which $N$ and $G$ pairs do minimisers exist in the
+relevant homotopy class?
+\end{question}
+
+\begin{question}
+What is the knot type of the spacetime trace of each discovered orbit?
+Is there a systematic map from symmetry class to knot invariant?
+\end{question}
+
+\begin{question}
+What is the stability character (elliptic, hyperbolic, complex-hyperbolic)
+of each discovered orbit? Are high-symmetry orbits generically more or
+less stable than low-symmetry ones?
+\end{question}
+
+\begin{question}
+Do the action values $\Action^\star(G, N)$ at minimisers admit a
+closed-form or asymptotic expression in the symmetry order $|G|$ and
+body count $N$?
+\end{question}
+
+\begin{question}
+Is there a formal correspondence between orbits whose spacetime traces
+realise specific knot types and known or hypothetical molecular knot
+topologies?
+\end{question}
+
+% ---------- 4. METHODOLOGY ----------
+\section{Methodology}
+
+\subsection{Phase 1: Symmetry-constrained search (N = 3, 4)}
+
+For each point group $G$ compatible with small $N$, we:
+\begin{enumerate}[leftmargin=1.8em]
+  \item Parameterise the fixed-point subspace $\mathrm{Fix}(G)$ using
+        a Fourier truncation $\gamma(t) \approx \sum_{k=0}^{K} (a_k \cos(2\pi kt/T)
+        + b_k \sin(2\pi kt/T))$ with symmetry-imposed linear constraints
+        on the coefficients $a_k, b_k \in \R^3$.
+  \item Minimise $\Action$ over the truncated space using gradient
+        descent with an adaptive step (L-BFGS), starting from multiple
+        random initialisations within the symmetry-compatible manifold.
+  \item Refine converged candidates using a symplectic integrator
+        (Yoshida 6th-order or Forest--Ruth) and Newton--Raphson
+        correction to a true periodic orbit.
+  \item Discard near-collisions and planar solutions (those for which
+        $\gamma$ lies within $\varepsilon$ of a fixed plane).
+\end{enumerate}
+
+\subsection{Phase 2: Higher symmetry and larger N}
+
+Extend to $N = 6, 12$ with tetrahedral and octahedral symmetry groups,
+exploiting the stronger constraints to keep the search space tractable.
+Explore icosahedral candidates at $N = 12$ and $N = 60$ as a high-risk,
+high-reward target.
+
+\subsection{Phase 3: Knot classification}
+
+For each discovered orbit, compute:
+\begin{itemize}[leftmargin=1.8em]
+  \item The writhe and crossing number of $\Gamma$ from a projection.
+  \item The Alexander polynomial $\Delta(t)$ via the Seifert matrix.
+  \item The HOMFLY-PT polynomial $P(v, z)$ as a stronger invariant.
+  \item The hyperbolic volume (if $\Gamma$ is hyperbolic) via SnapPy.
+\end{itemize}
+
+\subsection{Phase 4: Stability analysis}
+
+Integrate the variational equations alongside the orbit to obtain the
+monodromy matrix. Compute eigenvalues and classify stability. For
+marginally stable orbits, explore KAM tori numerically via surface-of-section.
+
+\subsection{Phase 5: Visualisation}
+
+Produce publication-quality renders: orbital traces as tubes in $\R^3$
+with point-group symmetry axes shown explicitly, spacetime braids rendered
+as three-dimensional knot diagrams, and animated GIFs of the full
+choreographic motion for public dissemination.
+
+% ---------- 5. EXPECTED OUTPUTS ----------
+\section{Expected Outputs}
+
+\begin{enumerate}[leftmargin=1.8em]
+  \item \textbf{A catalogue of 3D choreographies}, organised by
+        $(N, G, \text{knot type})$, with action values, stability
+        characters, and initial conditions provided to full double
+        precision.
+  \item \textbf{A correspondence table} mapping symmetry class to knot
+        invariant, with conjectures about which cells are empty and why.
+  \item \textbf{A computational toolkit} (Python, open-source) for
+        reproducing all results and searching for new orbits.
+  \item \textbf{A research paper} suitable for submission to a journal
+        such as \textit{Celestial Mechanics and Dynamical Astronomy},
+        \textit{Nonlinearity}, or \textit{Communications in Mathematical Physics}.
+  \item \textbf{A visual portfolio} for public dissemination across
+        scientific social media.
+\end{enumerate}
+
+% ---------- 6. DISSEMINATION ----------
+\section{Dissemination Plan}
+
+The work will be released in two stages. The catalogue and toolkit will
+be posted simultaneously to arXiv (math-ph / math.DS) and GitHub under
+a permissive open-source licence, with DOI minting via Zenodo to ensure
+citability. The paper will be submitted to a peer-reviewed journal
+concurrently with the arXiv preprint.
+
+Public communication will begin with the arXiv release and proceed across
+a coordinated set of accounts on X, Bluesky, Farcaster, and Hacker News,
+accompanied by the animated visualisations. Given the visual character of
+the work and the chemistry connection, we anticipate organic reach into
+both the physics and chemistry communities.
+
+% ---------- 7. OPEN QUESTIONS ----------
+\section{Open Questions and Risks}
+
+\begin{itemize}[leftmargin=1.8em]
+  \item \textbf{Collision avoidance}: Minimisers in some symmetry classes
+        may pass through collisions, rendering the action infinite or
+        the orbit non-physical. Excluding such classes analytically or
+        verifying their emptiness numerically is a prerequisite for clean
+        results.
+  \item \textbf{Uniqueness}: Multiple minimisers may exist within a
+        single symmetry-homotopy class. The relationship between connected
+        components of $\mathrm{Fix}(G)$ and distinct orbit families is
+        not understood a priori.
+  \item \textbf{Fourier truncation error}: Highly irregular curves
+        (low-action orbits near collision) may require large $K$ for
+        accurate representation. Convergence monitoring will be required.
+  \item \textbf{Genuinely new orbits}: There is a possibility — small
+        but non-negligible — that 3D choreographies simply do not exist
+        beyond degenerate (planar or hip-hop) cases for small $N$. A
+        null result, reported carefully, would itself be a contribution.
+\end{itemize}
+
+% ---------- REFERENCES ----------
+\begin{thebibliography}{9}
+
+\bibitem{CM2000}
+A.~Chenciner and R.~Montgomery,
+\textit{A remarkable periodic solution of the three-body problem in the case of equal masses},
+Ann.\ Math.\ \textbf{152} (2000), 881--901.
+
+\bibitem{Simo2002}
+C.~Sim\'o,
+\textit{New families of solutions in $N$-body problems},
+in \textit{European Congress of Mathematics}, Birkh\"auser, Basel, 2001, pp.\ 101--115.
+
+\bibitem{Chenciner2005}
+A.~Chenciner et al.,
+\textit{Are there perverse choreographies?},
+in \textit{New Advances in Celestial Mechanics and Hamiltonian Systems},
+Springer, 2004, pp.\ 63--76.
+
+\bibitem{Palais1979}
+R.~S.~Palais,
+\textit{The principle of symmetric criticality},
+Commun.\ Math.\ Phys.\ \textbf{69} (1979), 19--30.
+
+\bibitem{Terracini2004}
+S.~Terracini and A.~Venturelli,
+\textit{Symmetric trajectories for the $2N$-body problem with equal masses},
+Arch.\ Rational Mech.\ Anal.\ \textbf{184} (2007), 465--493.
+
+\bibitem{Stoddart2020}
+F.~Schaufelberger et al.,
+\textit{Synthesis of molecular knots},
+Chem.\ Soc.\ Rev.\ \textbf{50} (2021), 3473--3500.
+
+\end{thebibliography}
+
+\end{document}

@@ -1,0 +1,773 @@
+\documentclass[12pt, a4paper]{article}
+
+\usepackage{amsmath, amssymb, amsthm}
+\usepackage{geometry}
+\usepackage{hyperref}
+\usepackage{titlesec}
+\usepackage{parskip}
+\usepackage{microtype}
+\usepackage{lmodern}
+\usepackage{xcolor}
+\usepackage{booktabs}
+\usepackage{enumitem}
+\usepackage{mathtools}
+
+\geometry{margin=1.2in}
+
+\definecolor{deepblue}{RGB}{20, 40, 100}
+\definecolor{muted}{RGB}{90, 90, 90}
+
+\hypersetup{colorlinks=true, linkcolor=deepblue,
+            urlcolor=deepblue, citecolor=deepblue}
+
+\titleformat{\section}{\large\bfseries\color{deepblue}}{{\thesection}}{1em}{}
+\titleformat{\subsection}{\normalsize\bfseries\color{deepblue}}{{\thesubsection}}{1em}{}
+\titleformat{\subsubsection}{\normalsize\itshape\color{deepblue}}{{\thesubsubsection}}{1em}{}
+
+\theoremstyle{plain}
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{corollary}[theorem]{Corollary}
+\theoremstyle{definition}
+\newtheorem{definition}[theorem]{Definition}
+\newtheorem{remark}[theorem]{Remark}
+\newtheorem{example}[theorem]{Example}
+
+% ---- notation ----
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\C}{\mathbb{C}}
+\newcommand{\Z}{\mathbb{Z}}
+\newcommand{\N}{\mathbb{N}}
+\newcommand{\T}{\mathbb{T}}
+\newcommand{\Action}{\mathcal{A}}
+\newcommand{\Lag}{\mathcal{L}}
+\newcommand{\Fix}{\mathrm{Fix}}
+\newcommand{\bfq}{\mathbf{q}}
+\newcommand{\bfp}{\mathbf{p}}
+\newcommand{\bfa}{\mathbf{a}}
+\newcommand{\bfb}{\mathbf{b}}
+\newcommand{\bfz}{\mathbf{z}}
+\newcommand{\SO}{\mathrm{SO}}
+\newcommand{\On}{\mathrm{O}}
+\newcommand{\SU}{\mathrm{SU}}
+\newcommand{\eps}{\varepsilon}
+\newcommand{\abs}[1]{\left|#1\right|}
+\newcommand{\norm}[1]{\left\|#1\right\|}
+\newcommand{\ip}[2]{\langle #1,\, #2\rangle}
+
+\begin{document}
+
+% ---------- TITLE ----------
+\begin{center}
+  {\LARGE \textbf{Three-Dimensional Choreographic Orbits:\\[4pt]
+  Mathematical Framework}}\\[1.6em]
+  {\large \textcolor{muted}{MathFrame — v0.1
+    \quad|\quad Companion to RDD v0.1 and CompSpec v0.1}}\\[0.6em]
+  {\normalsize \textcolor{muted}{e5bed97b3349 \quad\textbullet\quad March 2026}}
+\end{center}
+
+\vspace{1em}
+\noindent\rule{\textwidth}{0.4pt}
+
+\begin{abstract}
+\noindent
+This document develops the mathematical foundations underlying the
+three-dimensional choreographic orbit classification programme.  We
+establish the variational framework, derive the Fourier-mode constraints
+imposed by each relevant three-dimensional point group via representation
+theory, state the symmetric-criticality existence theorem, develop the
+knot-theoretic characterisation of the spacetime trace, and present the
+Floquet--Krein stability theory for periodic Hamiltonian orbits.  These
+results inform the research design and computational specification;
+they will also constitute the theory section of the eventual paper.
+\end{abstract}
+
+\noindent\rule{\textwidth}{0.4pt}
+\tableofcontents
+\noindent\rule{\textwidth}{0.4pt}
+
+% ============================================================
+\section{Setup and Notation}
+% ============================================================
+
+\subsection{Units and normalisation}
+
+Throughout we work in units where the gravitational constant $G = 1$,
+all masses $m = 1$, and the choreographic period $T = 1$.  Distances
+are measured in units such that the characteristic action
+$\Action_0 = m^2 G / T^{1/3} = 1$.  Physical results are recovered
+by dimensional analysis.
+
+\subsection{Configuration space}
+
+The configuration space of $N$ bodies in $\R^3$ is
+\[
+  X_N \;=\; (\R^3)^N \setminus \Delta,
+  \qquad
+  \Delta = \bigl\{\bfq \in (\R^3)^N : \bfq_i = \bfq_j
+  \text{ for some } i \neq j\bigr\},
+\]
+with $\Delta$ the collision set.  The loop space we minimise over is
+\[
+  \Lambda_N \;=\; H^1(S^1,\, (\R^3)^N \setminus \Delta),
+\]
+the Sobolev space of absolutely continuous closed paths avoiding
+collisions.  The $H^1$ norm ensures the kinetic-energy term is finite
+and that $\Lambda_N$ carries a Hilbert manifold structure.
+
+\subsection{The Newtonian action}
+
+The Lagrangian action for one period is
+\begin{equation}\label{eq:action}
+  \Action[\bfq_1,\ldots,\bfq_N]
+  \;=\;
+  \int_0^1
+  \left[
+    \frac{1}{2}\sum_{i=1}^N \abs{\dot\bfq_i}^2
+    \;+\;
+    \sum_{i < j} \frac{1}{\abs{\bfq_i - \bfq_j}}
+  \right] dt.
+\end{equation}
+Critical points of $\Action$ on $\Lambda_N$ are $T=1$ periodic solutions
+of Newton's equations $\ddot\bfq_i = \sum_{j\neq i}(\bfq_j -
+\bfq_i)/\abs{\bfq_j-\bfq_i}^3$.
+
+% ============================================================
+\section{The Choreographic Subspace}
+% ============================================================
+
+\subsection{Definition and reduction}
+
+\begin{definition}[Choreographic orbit]\label{def:choreo}
+A path $(\bfq_1,\ldots,\bfq_N) \in \Lambda_N$ is \emph{choreographic}
+if there exists a single closed curve $\gamma \in H^1(S^1, \R^3)$ such
+that
+\[
+  \bfq_i(t) = \gamma\!\left(t - \tfrac{i-1}{N}\right),
+  \qquad i = 1,\ldots,N,
+\]
+where time is taken modulo 1.  The bodies follow the same curve in
+sequence, each offset by phase $1/N$.
+\end{definition}
+
+Substituting Definition~\ref{def:choreo} into \eqref{eq:action} and
+using $T$-periodicity collapses the functional to a single-curve action:
+\begin{equation}\label{eq:single}
+  \Action[\gamma]
+  \;=\;
+  \frac{1}{2}\int_0^1 \abs{\dot\gamma}^2\,dt
+  \;+\;
+  \frac{1}{N}\sum_{k=1}^{N-1}
+  \int_0^1 \frac{dt}{\abs{\gamma(t) - \gamma(t + k/N)}}.
+\end{equation}
+The choreographic subspace $\mathcal{C}_N \subset \Lambda_N$ is the
+image of the embedding $\gamma \mapsto (\bfq_1,\ldots,\bfq_N)$; it is
+a closed submanifold of $\Lambda_N$.  Critical points of
+$\Action|_{\mathcal{C}_N}$ correspond to genuine $N$-body solutions.
+
+\subsection{Fourier representation}
+
+Since $\gamma \in H^1(S^1,\R^3)$, it admits a Fourier expansion
+\begin{equation}\label{eq:fourier}
+  \gamma(t)
+  = \sum_{k=1}^{\infty}
+    \left[\bfa_k \cos(2\pi k t) + \bfb_k \sin(2\pi k t)\right],
+  \qquad \bfa_k, \bfb_k \in \R^3,
+\end{equation}
+where the zero mode $\bfa_0 = 0$ by the centre-of-mass constraint
+$\sum_i \bfq_i \equiv 0$.  The $H^1$ condition reads
+$\sum_{k=1}^\infty k^2(\abs{\bfa_k}^2 + \abs{\bfb_k}^2) < \infty$.
+
+It is convenient to pass to complex amplitudes.  Write
+$\gamma(t) = \mathrm{Re}\sum_{k=1}^\infty \bfz_k\,e^{2\pi ikt}$, so
+$\bfz_k = \bfa_k - i\bfb_k \in \C^3$.  The phase-shift
+$\gamma(t) \mapsto \gamma(t + s)$ acts by $\bfz_k \mapsto
+e^{2\pi iks}\bfz_k$; the spatial transformation $R \in \On(3)$ acts by
+$\bfz_k \mapsto R\bfz_k$ (applied componentwise in $\C^3$ via the
+complexification of $R$).
+
+% ============================================================
+\section{Symmetry Groups and Equivariant Critical Points}
+% ============================================================
+
+\subsection{The symmetry group of a choreography}
+
+The symmetry group of a choreographic orbit is a subgroup of
+\[
+  G \;\subset\; \On(3) \times D_N,
+\]
+where $D_N = \Z/N\Z \rtimes \Z/2\Z$ is the dihedral group of order $2N$.
+The $\Z/N\Z$ factor permutes the bodies cyclically; the $\Z/2\Z$ factor
+is time-reversal $t \mapsto -t$, which for an equal-mass choreography
+acts as a spatial isometry composed with reversal of the traversal
+direction.  A generator of the symmetry group is a triple
+$(R, \sigma, \epsilon)$ with $R \in \On(3)$, $\sigma \in \Z/N\Z$,
+$\epsilon \in \{+1,-1\}$, acting on $\gamma$ by
+\begin{equation}\label{eq:gaction}
+  (R,\sigma,\epsilon)\cdot\gamma(t)
+  \;=\;
+  R\,\gamma\!\left(\epsilon t - \tfrac{\sigma}{N}\right).
+\end{equation}
+Most groups arising in practice have $\epsilon = +1$ (no time-reversal);
+we specialise to this case initially and note where $\epsilon = -1$ is
+required.
+
+\subsection{Induced representation on Fourier modes}
+
+Applying \eqref{eq:gaction} to the Fourier series \eqref{eq:fourier}
+with $\epsilon = +1$ gives, for mode $k$:
+\begin{equation}\label{eq:modeaction}
+  \bfz_k \;\longmapsto\; e^{-2\pi ik\sigma/N}\,R\,\bfz_k.
+\end{equation}
+For $\gamma$ to be a fixed point of $(R,\sigma,+1)$, each mode must
+satisfy
+\begin{equation}\label{eq:fixcond}
+  \bfz_k \;=\; e^{-2\pi ik\sigma/N}\,R\,\bfz_k,
+\end{equation}
+i.e.\ $\bfz_k$ lies in the $e^{2\pi ik\sigma/N}$-eigenspace of $R$
+(in the complexification of $\R^3$).  This is the key equation from
+which all symmetry constraints follow.
+
+\subsection{The Principle of Symmetric Criticality}
+
+\begin{theorem}[Palais, 1979]\label{thm:psc}
+Let a compact Lie group $G$ act smoothly and isometrically on a
+Hilbert manifold $\mathcal{M}$, and let $f : \mathcal{M} \to \R$ be a
+$G$-invariant $C^1$ functional.  Then every critical point of
+$f|_{\Fix(G)}$ is a critical point of $f$ on all of $\mathcal{M}$.
+\end{theorem}
+
+\begin{corollary}
+Every local minimiser of $\Action|_{\Fix(G) \cap \mathcal{C}_N}$
+is a genuine $N$-body choreographic solution.
+\end{corollary}
+
+The theorem applies here because $\On(3)$ is compact and acts
+isometrically on $H^1(S^1,\R^3)$ with respect to the natural $L^2$
+inner product, and $\Action$ is manifestly $\On(3)$-invariant.  The
+Reynolds projector $P_G = |G|^{-1}\sum_{g\in G}\rho(g)$ is the
+orthogonal projection onto $\Fix(G)$.
+
+% ============================================================
+\section{Point-Group Constraints: Fourier Mode Analysis}
+% ============================================================
+
+We now apply \eqref{eq:fixcond} systematically to each point-group
+family.  For each group we state: the generator(s), the surviving
+modes, and the dimension count.  We use the Sch\"{o}nflies notation
+throughout.
+
+\subsection{Cyclic groups $C_n$}
+
+The group $C_n$ is generated by $(R_n, 1, +1)$, where $R_n \in
+\SO(3)$ is rotation by $2\pi/n$ about the $z$-axis and $\sigma = 1$.
+The complexified eigenvalues of $R_n$ are $\{e^{2\pi i/n}, e^{-2\pi
+i/n}, 1\}$ for the three components $(z_+, z_-, z_0)$ in the
+helical basis, where $z_\pm = x \pm iy$ and $z_0 = z$.
+
+Equation \eqref{eq:fixcond} for this generator becomes:
+\[
+  \bfz_k \;=\; e^{-2\pi ik/n}\,R_n\,\bfz_k.
+\]
+Decomposing by helicity:
+\begin{itemize}[leftmargin=1.8em]
+  \item \textbf{$z_+$-component} (eigenvalue $e^{2\pi i/n}$):
+        condition is $e^{2\pi i/n} e^{-2\pi ik/n} = 1$,
+        i.e.\ $n \mid (1-k)$, i.e.\ $k \equiv 1 \pmod{n}$.
+  \item \textbf{$z_-$-component} (eigenvalue $e^{-2\pi i/n}$):
+        condition is $e^{-2\pi i/n} e^{-2\pi ik/n} = 1$,
+        i.e.\ $n \mid (1+k)$, i.e.\ $k \equiv n-1 \pmod{n}$.
+        Since $z_- = \overline{z_+}$, this is automatically satisfied
+        when the $z_+$ condition holds.
+  \item \textbf{$z_0$-component} ($z$-axis, eigenvalue $1$):
+        condition is $e^{-2\pi ik/n} = 1$,
+        i.e.\ $n \mid k$, i.e.\ $k \equiv 0 \pmod{n}$.
+\end{itemize}
+
+\begin{proposition}[$C_n$ mode selection]\label{prop:cn}
+For an $N=n$ body choreography with $C_n$ symmetry, the surviving
+Fourier modes are:
+\[
+  xy\text{-plane}: \quad k \;\in\; \{1, n+1, 2n+1, \ldots\},
+  \qquad
+  z\text{-axis}: \quad k \;\in\; \{n, 2n, 3n, \ldots\}.
+\]
+For a truncation at $K$ modes, the dimension of $\Fix(C_n)$ is
+$\dim_\R = 4\lfloor K/n \rfloor + 2\lfloor (K-1)/n + 1\rfloor
+\approx 6K/n$.
+\end{proposition}
+
+\begin{example}[$C_3$, $N=3$]
+Surviving modes: $xy$ at $k = 1, 4, 7, 10, \ldots$;
+$z$ at $k = 3, 6, 9, \ldots$.  At truncation $K = 12$:
+4 xy-modes ($k=1,4,7,10$) contributing 8 real d.o.f.,
+plus 4 z-modes ($k=3,6,9,12$) contributing 4 real d.o.f.
+Total: 12 real parameters vs.\ the unconstrained 36. Reduction factor: 3.
+\end{example}
+
+\subsection{Dihedral groups $D_n$, $D_{nh}$, $D_{nd}$}
+
+$D_n$ adds a $C_2$ rotation about an axis perpendicular to $z$, e.g.\
+$R_{2x}$ (rotation by $\pi$ about $x$), with body permutation $\sigma
+= 0$ (no phase shift).  In helicity components:
+$R_{2x} : z_+ \mapsto -\overline{z_-}$, $z_0 \mapsto -z_0$.
+The additional constraint on surviving $C_n$ modes is:
+
+\begin{itemize}[leftmargin=1.8em]
+  \item \textbf{$z_+$-component}: $R_{2x}$ maps the $k\equiv 1$
+        modes to $k \equiv n-1$ modes.  Compatibility requires
+        $\bfz_k^+ = -\overline{\bfz_k^-}$, fixing the imaginary part
+        of $z_+$ in terms of the real part.  Net effect: one real
+        parameter per surviving $xy$ mode instead of two.
+  \item \textbf{$z$-component}: $R_{2x}$ maps $z_0 \mapsto -z_0$,
+        so $k\equiv 0$ z-modes are forced to zero.
+\end{itemize}
+
+\begin{proposition}[$D_n$ mode selection]
+For $D_n$ symmetry with $N=n$, the surviving modes are:
+$xy$-plane modes at $k \equiv 1 \pmod{n}$ with \emph{one} real
+d.o.f.\ each; $z$-axis modes vanish entirely.  The orbit is
+therefore confined to a plane: $D_n$ choreographies with $N=n$
+are generically planar.
+\end{proposition}
+
+This result is significant: it means that searching for non-planar
+choreographies requires symmetry groups where the $z$-modes are
+\emph{not} killed.  The $C_n$ and $C_{nv}$ families are the
+natural targets for genuinely 3D orbits.
+
+\textbf{$D_{nh}$ and $D_{nd}$:} Adding a horizontal reflection
+$\sigma_h$ (for $D_{nh}$) maps $z_0 \to -z_0$, again
+eliminating $z$-modes and enforcing planarity.  $D_{nd}$ adds
+an $S_{2n}$ improper rotation; the analysis is similar and also
+yields planar orbits for generic $N$.
+
+\subsection{Cyclic groups with vertical reflection: $C_{nv}$}
+
+$C_{nv}$ adds a vertical reflection $\sigma_v$ through the $xz$-plane,
+which acts as $(x,y,z) \mapsto (x,-y,z)$, i.e.\ $z_+ \mapsto
+\overline{z_+}$, with $\sigma=0$ (no phase shift).  The $C_n$ mode
+selection survives; the $\sigma_v$ constraint additionally requires
+$\bfz_k^{xy}$ to be real in the helicity basis, fixing
+$\mathrm{Im}(\bfz_k^{xy}) = 0$.  For the $z$-modes, $\sigma_v$ acts
+trivially, leaving them free.
+
+\begin{proposition}[$C_{nv}$ mode selection]\label{prop:cnv}
+For $C_{nv}$ with $N=n$:
+$xy$-plane modes at $k \equiv 1 \pmod{n}$ each contribute one
+real d.o.f.\ (not two); $z$-axis modes at $k \equiv 0 \pmod{n}$
+each contribute two real d.o.f.\ (both $\bfa_k^z$ and $\bfb_k^z$ are free).
+The orbits are generically \emph{non-planar}.
+\end{proposition}
+
+The $C_{nv}$ family therefore provides the simplest non-planar
+choreographic orbits with non-trivial symmetry.  The $C_{3v}$ case
+with $N=3$ is our primary Phase\,1 target.
+
+\subsection{Tetrahedral group $T$ and $T_d$}
+
+The tetrahedral group $T \cong A_4$ has order 12, generated by a
+$C_3$ rotation about the $(1,1,1)$-axis and a $C_2$ rotation about
+the $z$-axis.  For an $N$-body choreography with $T$ symmetry, $N$
+must be divisible by the order of the $C_3$ element in the body-permutation
+representation; the smallest natural choice is $N=12$ (one body per
+element of $T$).
+
+Applying \eqref{eq:fixcond} to all 12 generators of $T$ acting
+simultaneously constrains the surviving modes.  The key result is:
+
+\begin{proposition}[$T$ mode selection, $N=12$]\label{prop:T}
+For $N=12$ with full tetrahedral symmetry $T$, the first
+surviving mode index is $k=1$ (which carries a 3-dimensional
+real space of coefficients transforming as the standard
+representation of $T$).  Subsequent survivors occur at
+$k \equiv 1 \pmod{12}$ for the $xy$-components and
+$k \equiv 0 \pmod{12}$ for the $z$-component (the $A_1$
+representation).  At truncation $K=48$ this gives approximately
+$48/12 \times 6 \approx 24$ real parameters.
+\end{proposition}
+
+$T_d$ adds improper $S_4$ axes.  The additional constraint selects
+among representations of $T$ and may further eliminate $z$-modes,
+potentially restricting to planar orbits; this requires case-by-case
+analysis.
+
+\subsection{Octahedral group $O$ and $O_h$}
+
+The octahedral group $O \cong S_4$ has order 24.  For $N=24$
+(one body per group element), the analysis parallels the tetrahedral
+case.  The mode constraints are sparser: surviving modes occur at
+$k \equiv 1 \pmod{24}$ for the $xy$-components, and the first
+non-trivial $z$-mode is at $k = 24$.  At truncation $K=96$:
+approximately $96/24 \times 6 = 24$ real parameters — the same
+dimensionality as the tetrahedral case, despite the larger group,
+because the higher symmetry compensates for the larger $N$.
+
+$O_h = O \times \Z/2\Z$ (adding inversion) tends to force additional
+pairings between modes and can eliminate the $z$-modes entirely
+depending on $N$.
+
+\subsection{Icosahedral group $I$ and $I_h$}
+
+$I \cong A_5$ has order 60, making it the largest finite subgroup of
+$\SO(3)$.  For $N = 60$, the mode constraints are:
+$xy$-components survive at $k \equiv 1 \pmod{60}$ and $z$-components
+at $k \equiv 0 \pmod{60}$.  At truncation $K = 240$: $240/60 \times
+6 = 24$ real parameters — the same order as tetrahedral and
+octahedral cases.  The key open question is whether $N=12$ (a proper
+subgroup arrangement) admits icosahedral-class choreographies.
+
+\begin{remark}
+The dimension count suggests that the search is no harder for
+icosahedral than tetrahedral symmetry at fixed truncation ratio $K/N$
+— the larger group buys just as much reduction as the larger $N$
+costs.  This is the dimensional miracle that makes the icosahedral
+case computationally tractable.
+\end{remark}
+
+\subsection{Summary table}
+
+\begin{center}
+\begin{tabular}{lllllc}
+\toprule
+\textbf{Group} & \textbf{Order} & \textbf{Natural $N$}
+  & \textbf{$xy$ modes} & \textbf{$z$ modes}
+  & \textbf{3D?} \\
+\midrule
+$C_n$   & $n$  & $n$  & $k \equiv 1 \pmod{n}$ & $k \equiv 0\pmod{n}$ & Yes \\
+$C_{nv}$& $2n$ & $n$  & $k \equiv 1 \pmod{n}$ & $k \equiv 0\pmod{n}$ & Yes \\
+$D_n$   & $2n$ & $n$  & $k \equiv 1 \pmod{n}$ & none                 & No  \\
+$D_{nh}$& $4n$ & $n$  & $k \equiv 1 \pmod{n}$ & none                 & No  \\
+$T$     & 12   & 12   & $k \equiv 1 \pmod{12}$& $k \equiv 0\pmod{12}$& Yes \\
+$T_d$   & 24   & 12   & (reduced)             & (case-dep.)          & TBD \\
+$O$     & 24   & 24   & $k \equiv 1 \pmod{24}$& $k \equiv 0\pmod{24}$& Yes \\
+$O_h$   & 48   & 24   & (reduced)             & (case-dep.)          & TBD \\
+$I$     & 60   & 60   & $k \equiv 1 \pmod{60}$& $k \equiv 0\pmod{60}$& Yes \\
+$I_h$   & 120  & 60   & (reduced)             & (case-dep.)          & TBD \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+% ============================================================
+\section{Existence Theory}
+% ============================================================
+
+\subsection{Minimisation and the coercivity argument}
+
+The action $\Action$ in \eqref{eq:single} is bounded below (the
+potential is positive) but not coercive on all of $\mathcal{C}_N$
+due to the possibility of collisions making $\Action \to +\infty$.
+The key technique, introduced by Chenciner--Montgomery \cite{CM2000},
+is to restrict minimisation to a homotopy class $[\gamma]_0 \in
+\pi_0(\Lambda_N^G)$ that \emph{excludes collisions by topology}.
+
+\begin{theorem}[Chenciner--Montgomery, 2000]\label{thm:cm}
+If the homotopy class $[\gamma_0] \in \pi_1(\mathcal{C}_N / G)$
+has the property that every path in this class must pass through the
+collision set $\Delta$ to degenerate, then $\Action$ achieves its
+infimum on $[\gamma_0] \cap \Fix(G)$, and the minimiser is a smooth
+choreographic orbit.
+\end{theorem}
+
+The original proof uses the Marchal lemma \cite{Marchal2002}: any
+orbit with a collision can be locally deformed to reduce the action
+while remaining in the same homotopy class, ruling out collisions as
+minimisers.
+
+\subsection{Symmetry-forced collision exclusion}
+
+For point groups $G$ with sufficiently high symmetry, collision
+exclusion follows directly from the symmetry constraints without
+invoking Marchal's lemma.
+
+\begin{proposition}\label{prop:collision-free}
+If the symmetry group $G$ contains elements $(R_k, k, +1)$ for all
+$k = 1, \ldots, N-1$ such that $R_k$ has no fixed point in $\R^3$,
+then the fixed-point subspace $\Fix(G)$ is collision-free.
+\end{proposition}
+
+\begin{proof}
+At a collision between bodies $i$ and $j$, we have
+$\bfq_i(t_0) = \bfq_j(t_0)$ at some time $t_0$.  By the
+choreographic constraint, $\bfq_j(t) = \bfq_1(t + (j-i)/N)$, so
+the collision becomes $\gamma(t_0) = \gamma(t_0 + (j-i)/N)$.  Under
+the symmetry $(R_{j-i}, j-i, +1)$, this point must satisfy
+$\gamma(t_0) = R_{j-i}\gamma(t_0)$, i.e.\ $\gamma(t_0)$ is a
+fixed point of $R_{j-i}$.  If $R_{j-i}$ has no fixed point (e.g.\
+if it is a rotation by an angle $\neq 0, \pi$ in $\SO(3)$),
+no collision is possible.
+\end{proof}
+
+This is directly applicable to the $C_n$ and $C_{nv}$ families for
+odd $n \geq 3$: the rotation $R_k = R_n^k$ has no fixed point for
+$k \not\equiv 0 \pmod{n}$, so the odd-$n$ choreographies in these
+families are automatically collision-free.
+
+\subsection{Open existence questions}
+
+The following cases are open and constitute part of the research
+programme:
+\begin{enumerate}[leftmargin=1.8em]
+  \item Does the $C_{3v}$ class with $N=3$ admit a genuinely
+        non-planar minimiser? (Numerically expected: yes.)
+  \item Do any tetrahedral-class ($N=12$) minimisers exist in the
+        $3D$-enabled modes?
+  \item Does the icosahedral case ($N=60$) admit a minimiser, or
+        does the small search space force the minimiser to collapse
+        to a lower-symmetry orbit?
+\end{enumerate}
+
+% ============================================================
+\section{Knot Theory of the Spacetime Trace}
+% ============================================================
+
+\subsection{The configuration space and its topology}
+
+The unordered configuration space of $N$ distinct points in $\R^3$ is
+\[
+  \mathrm{UConf}_N(\R^3)
+  \;=\;
+  \bigl((\R^3)^N \setminus \Delta\bigr) / S_N.
+\]
+The fundamental group $\pi_1(\mathrm{UConf}_N(\R^3))$ is the braid
+group $B_N$.  A choreographic orbit traces a loop in
+$\mathrm{UConf}_N(\R^3)$ (since the bodies return to their starting
+configuration after one period), and its homotopy class is a conjugacy
+class in $B_N$ — the topological type of the orbit.
+
+\subsection{From braid to knot: the spacetime trace}
+
+A choreographic orbit defines a \emph{pure braid} in $B_N$: body 1
+traces a closed curve and returns to its starting position (not
+permuted to another position).  The spacetime trace of body 1 is the
+closed curve
+\begin{equation}\label{eq:strace}
+  \Gamma : S^1 \to \R^3,
+  \qquad
+  \Gamma(\phi) = \gamma\!\left(\tfrac{\phi}{2\pi}\right),
+\end{equation}
+where we close the time-axis $[0,1]$ into $S^1$.  Topologically,
+$\Gamma$ is a knot (or link) in $S^3 = \R^3 \cup \{\infty\}$.
+
+For planar choreographies, $\Gamma$ lies in a solid torus
+(thickening of the orbital plane times $S^1$) and is classified by
+a braid word in $B_N$.  For three-dimensional choreographies,
+$\Gamma$ can leave the solid torus and realise genuinely knotted
+isotopy types not accessible from planar orbits.
+
+\begin{remark}
+The symmetry group $G$ constrains the knot type of $\Gamma$.  If
+$(R, 0, +1) \in G$ is a spatial symmetry (no body permutation),
+then $R$ acts on $\Gamma$ as a knot symmetry: $R \cdot \Gamma$ is
+isotopic to $\Gamma$.  This places $\Gamma$ in the sub-collection of
+knots admitting the symmetry $R$ — a significant restriction on
+the knot table.
+\end{remark}
+
+\subsection{Polynomial invariants}
+
+The following invariants are computed for each discovered orbit.
+
+\textbf{Alexander polynomial.}  The Alexander polynomial
+$\Delta_\Gamma(t) \in \Z[t^{\pm 1}]$ is computed from the Seifert
+matrix $V$ of $\Gamma$ (a Seifert surface is triangulated from a
+regular projection):
+\[
+  \Delta_\Gamma(t) = \det\!\left(t^{1/2}V - t^{-1/2}V^\top\right).
+\]
+The Alexander polynomial detects the unknot (it equals 1) and
+distinguishes many knot types, but is not a complete invariant.
+
+\textbf{HOMFLY-PT polynomial.}  The HOMFLY-PT polynomial
+$P_\Gamma(v, z) \in \Z[v^{\pm 1}, z^{\pm 1}]$ satisfies the skein
+relation
+\[
+  v^{-1}P_{L_+} - vP_{L_-} = z P_{L_0},
+\]
+where $L_+, L_-, L_0$ are diagrams differing at a single crossing.
+It strictly dominates the Alexander polynomial (and the Jones
+polynomial as a special case) and provides the finest easily-computable
+invariant available.
+
+\textbf{Hyperbolic volume.}  If the knot complement
+$S^3 \setminus \Gamma$ admits a hyperbolic metric (the generic case by
+Thurston's geometrisation theorem), its volume $\mathrm{vol}(\Gamma)$
+is a complete knot invariant in the hyperbolic class.  Computed via SnapPy.
+
+\subsection{The chemistry correspondence}
+
+The class of \emph{torus knots} $T(p,q)$ (curves winding $p$ times
+around the longitudinal direction and $q$ times around the meridional
+direction of a torus) is of particular interest.  Torus knots are
+the topological type of the most commonly synthesised molecular knots:
+the trefoil $T(2,3)$ and the cinquefoil $T(2,5)$ have been realised
+as single-molecule structures \cite{Stoddart2020}.
+
+We conjecture that $C_n$-symmetric choreographies with $n = 2p+1$
+preferentially realise torus knots of type $T(2, n)$: the
+$z$-axis modes generate the ``tube'' direction of the torus while the
+$xy$-plane modes generate the winding.  If confirmed, this establishes
+a direct map from symmetry class to knot type and makes
+the chemistry connection precise.
+
+% ============================================================
+\section{Floquet--Krein Stability Theory}
+% ============================================================
+
+\subsection{Linearisation}
+
+Let $\mathbf{x}^*(t) = (\bfq^*(t), \dot\bfq^*(t)) \in T^*(\R^3)^N$
+be a choreographic periodic orbit of period 1.  The linearised
+equations of motion for a displacement $\delta\mathbf{x}(t)$ are
+\begin{equation}\label{eq:linear}
+  \frac{d}{dt}\delta\mathbf{x} \;=\; J(t)\,\delta\mathbf{x},
+  \qquad
+  J(t) = \begin{pmatrix} 0 & I \\ D^2U(\bfq^*(t)) & 0 \end{pmatrix},
+\end{equation}
+where $U = -\sum_{i<j}|\bfq_i - \bfq_j|^{-1}$ is the potential and
+$D^2U$ is its Hessian matrix.  Equation \eqref{eq:linear} is a
+linear Hamiltonian system with periodic coefficients.
+
+\subsection{The monodromy matrix}
+
+The fundamental matrix $\Phi(t)$ of \eqref{eq:linear} satisfies
+$\dot\Phi = J(t)\Phi$, $\Phi(0) = I$.  The \emph{monodromy matrix}
+$M = \Phi(1)$ encodes the linearised dynamics over one period.  Since
+\eqref{eq:linear} is Hamiltonian, $M \in \mathrm{Sp}(6N, \R)$:
+it is symplectic, $M^\top \Omega M = \Omega$, where $\Omega$ is the
+standard symplectic form.
+
+The eigenvalues of $M$ occur in groups consistent with the symplectic
+structure:
+\begin{itemize}[leftmargin=1.8em]
+  \item Eigenvalues on the unit circle come in conjugate pairs
+        $\{e^{i\theta}, e^{-i\theta}\}$ (elliptic modes).
+  \item Real eigenvalues come in reciprocal pairs $\{\lambda,
+        \lambda^{-1}\}$ (hyperbolic modes).
+  \item Off-axis eigenvalues come in quadruples $\{\lambda,
+        \bar\lambda, \lambda^{-1}, \bar\lambda^{-1}\}$
+        (complex-hyperbolic modes).
+\end{itemize}
+By symmetry, $\lambda = 1$ always has multiplicity at least 4
+(corresponding to time-translation and the three spatial
+translations).  These are the \emph{trivial} eigenvalues.
+
+\subsection{Krein signatures}
+
+For elliptic eigenvalues $e^{\pm i\theta}$, linear stability is
+not sufficient: one must also classify the Krein signature to
+determine whether the orbit can be destabilised by arbitrarily small
+perturbations.  The Krein signature of an elliptic eigenvalue
+$\lambda = e^{i\theta}$ is the sign of the quadratic form
+$\Omega(\cdot, M\cdot)$ restricted to the $\lambda$-eigenspace.
+
+\begin{theorem}[Krein--Moser]\label{thm:km}
+An elliptic eigenvalue $e^{i\theta}$ of $M$ is \emph{Krein-stable}
+(i.e.\ cannot leave the unit circle under small perturbations of $M$
+within $\mathrm{Sp}(6N,\R)$) if and only if its Krein signature is
+definite (all $+1$ or all $-1$).  Instability requires the collision
+of two eigenvalues with opposite Krein signatures.
+\end{theorem}
+
+\begin{corollary}
+An orbit is \emph{Krein-stable} if all its non-trivial elliptic
+eigenvalues have definite Krein signature.  Krein stability implies
+linear stability and is a necessary condition for KAM non-linear
+stability.
+\end{corollary}
+
+\subsection{KAM conditions}
+
+By the KAM theorem applied to Hamiltonian systems near periodic
+orbits \cite{Moser1962}, an orbit is non-linearly stable if:
+\begin{enumerate}[leftmargin=1.8em]
+  \item All non-trivial Floquet multipliers lie on the unit circle
+        (linear stability).
+  \item All Floquet angles $\theta_j$ satisfy non-resonance conditions
+        $\sum_j n_j \theta_j \neq 2\pi k$ for all integer vectors
+        $(n_j)$ with $\sum_j |n_j| \leq 4$ and integers $k$.
+  \item A non-degeneracy (twist) condition holds for the
+        Birkhoff normal form to fourth order.
+\end{enumerate}
+Conditions (1) and (2) are checkable from the Floquet spectrum;
+condition (3) requires computing the fourth-order Birkhoff normal form,
+which is numerically intensive but tractable for small $N$.
+
+% ============================================================
+\section{Implications for the Research Programme}
+% ============================================================
+
+The mathematical analysis above has several direct consequences for
+the classification programme:
+
+\begin{enumerate}[leftmargin=1.8em]
+  \item \textbf{Non-planarity is a symmetry statement.}  Whether a
+        given point group yields 3D orbits is determined exactly by
+        Propositions~\ref{prop:cn}--\ref{prop:cnv}: the $z$-modes
+        survive iff the group does not contain an element that
+        eliminates them.  The summary table in Section~4 directly
+        guides which groups to search.
+  \item \textbf{Collision-free search is guaranteed for odd $C_n$
+        and $C_{nv}$.}  Proposition~\ref{prop:collision-free} means
+        the softening regularisation used in computation can be
+        removed for these families without risk of spurious
+        near-collision minimisers.
+  \item \textbf{The knot type is constrained by the symmetry group.}
+        The conjectured $T(2,n)$ torus knot structure for $C_n$
+        choreographies, if confirmed numerically, would constitute
+        a new theorem.  Its proof would use the symmetry-constrained
+        form of $\Gamma$ and the classification of periodic braids
+        under cyclic group actions.
+  \item \textbf{The CompSpec is revised.}  The Reynolds projector
+        construction in the CompSpec should now use the explicit
+        mode selection rules derived here (Section~4) rather than the
+        generic Reynolds averaging, which is equivalent but far more
+        expensive to compute.  The mode selection table allows
+        $P_G$ to be constructed in $O(K)$ rather than $O(|G| \cdot K)$
+        time.
+  \item \textbf{The RDD claim on icosahedral tractability is justified.}
+        The ``dimensional miracle'' noted in Section~4.6 (the search
+        space dimension at fixed $K/N$ is independent of $|G|$)
+        formally justifies the optimistic treatment of icosahedral
+        targets in the RDD.
+\end{enumerate}
+
+% ---------- REFERENCES ----------
+\begin{thebibliography}{9}
+
+\bibitem{CM2000}
+A.~Chenciner and R.~Montgomery,
+\textit{A remarkable periodic solution of the three-body problem in
+the case of equal masses},
+Ann.\ Math.\ \textbf{152} (2000), 881--901.
+
+\bibitem{Marchal2002}
+C.~Marchal,
+\textit{How the method of minimization of action avoids singularities},
+Cel.\ Mech.\ Dyn.\ Astr.\ \textbf{83} (2002), 325--353.
+
+\bibitem{Palais1979}
+R.~S.~Palais,
+\textit{The principle of symmetric criticality},
+Commun.\ Math.\ Phys.\ \textbf{69} (1979), 19--30.
+
+\bibitem{Simo2002}
+C.~Sim\'o,
+\textit{New families of solutions in $N$-body problems},
+in \textit{European Congress of Mathematics},
+Birkh\"auser, Basel, 2001, pp.\ 101--115.
+
+\bibitem{Moser1962}
+J.~Moser,
+\textit{On invariant curves of area-preserving mappings of an annulus},
+Nachr.\ Akad.\ Wiss.\ G\"ottingen Math.-Phys.\ Kl.\ (1962), 1--20.
+
+\bibitem{Stoddart2020}
+F.~Schaufelberger et al.,
+\textit{Synthesis of molecular knots},
+Chem.\ Soc.\ Rev.\ \textbf{50} (2021), 3473--3500.
+
+\end{thebibliography}
+
+\end{document}

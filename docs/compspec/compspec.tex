@@ -1,0 +1,577 @@
+\documentclass[12pt, a4paper]{article}
+
+\usepackage{amsmath, amssymb, amsthm}
+\usepackage{geometry}
+\usepackage{hyperref}
+\usepackage{titlesec}
+\usepackage{parskip}
+\usepackage{microtype}
+\usepackage{lmodern}
+\usepackage{xcolor}
+\usepackage{booktabs}
+\usepackage{enumitem}
+\usepackage{listings}
+\usepackage{array}
+
+\geometry{margin=1.2in}
+
+\definecolor{deepblue}{RGB}{20, 40, 100}
+\definecolor{muted}{RGB}{90, 90, 90}
+\definecolor{codegray}{RGB}{245, 245, 245}
+\definecolor{codegreen}{RGB}{0, 120, 0}
+\definecolor{codepurple}{RGB}{120, 0, 200}
+
+\hypersetup{
+  colorlinks=true,
+  linkcolor=deepblue,
+  urlcolor=deepblue,
+  citecolor=deepblue
+}
+
+\titleformat{\section}{\large\bfseries\color{deepblue}}{{\thesection}}{1em}{}
+\titleformat{\subsection}{\normalsize\bfseries\color{deepblue}}{{\thesubsection}}{1em}{}
+\titleformat{\subsubsection}{\normalsize\itshape\color{deepblue}}{{\thesubsubsection}}{1em}{}
+
+\lstdefinestyle{python}{
+  backgroundcolor=\color{codegray},
+  basicstyle=\ttfamily\small,
+  breaklines=true,
+  commentstyle=\color{codegreen},
+  keywordstyle=\color{deepblue}\bfseries,
+  stringstyle=\color{codepurple},
+  language=Python,
+  frame=single,
+  framesep=4pt,
+  xleftmargin=10pt,
+  xrightmargin=10pt,
+  numbers=left,
+  numberstyle=\tiny\color{muted},
+  numbersep=8pt,
+  showspaces=false,
+  tabsize=4,
+}
+
+\theoremstyle{definition}
+\newtheorem{definition}{Definition}
+\newtheorem{decision}{Design Decision}
+
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\Z}{\mathbb{Z}}
+\newcommand{\Action}{\mathcal{A}}
+\newcommand{\Fix}{\mathrm{Fix}}
+\newcommand{\bfq}{\mathbf{q}}
+\newcommand{\bfa}{\mathbf{a}}
+\newcommand{\bfb}{\mathbf{b}}
+\newcommand{\SO}{\mathrm{SO}}
+\newcommand{\eps}{\varepsilon}
+
+
+\begin{document}
+
+% ---------- TITLE ----------
+\begin{center}
+  {\LARGE \textbf{Three-Dimensional Choreographic Orbits:\\[4pt]
+  Computational Specification}}\\[1.6em]
+  {\large \textcolor{muted}{CompSpec — v0.1 \quad|\quad Companion to RDD v0.1}}\\[0.6em]
+  {\normalsize \textcolor{muted}{e5bed97b3349 \quad\textbullet\quad March 2026}}
+\end{center}
+
+\vspace{1em}
+\noindent\rule{\textwidth}{0.4pt}
+\vspace{0.5em}
+
+\tableofcontents
+
+\vspace{0.5em}
+\noindent\rule{\textwidth}{0.4pt}
+
+% ---------- 1. SOFTWARE STACK ----------
+\section{Software Stack and Hardware Target}
+
+\subsection{Primary framework: JAX}
+
+\begin{decision}
+All action evaluation and gradient computation will be implemented in
+\textbf{JAX} \texttt{(jax>=0.4.25)}, rather than NumPy, PyTorch, or SciPy.
+\end{decision}
+
+JAX is the correct choice for three compounding reasons. First, the action
+functional $\Action[\gamma]$ is a smooth function of the Fourier coefficients;
+JAX's \texttt{jax.grad} and \texttt{jax.hessian} provide exact gradients and
+Hessians at machine precision without finite-differencing. Second,
+\texttt{jax.vmap} vectorises the action evaluation over an entire batch of
+candidate coefficient vectors with zero loop overhead, enabling thousands of
+random initialisations to be evaluated simultaneously. Third, \texttt{jax.jit}
+compiles the entire pipeline — Fourier synthesis, pairwise distance computation,
+action summation — to XLA and dispatches it to the GPU without data movement
+overhead.
+
+\subsection{Supporting libraries}
+
+\begin{center}
+\begin{tabular}{lll}
+\toprule
+\textbf{Library} & \textbf{Version} & \textbf{Role} \\
+\midrule
+\texttt{jax[cuda12]} & $\geq$\,0.4.25 & Core autodiff, JIT, GPU dispatch \\
+\texttt{optax}       & $\geq$\,0.2.2  & L-BFGS and Adam optimisers \\
+\texttt{scipy}       & $\geq$\,1.13   & Newton--Raphson, eigenvalues \\
+\texttt{snappy}      & $\geq$\,3.1    & Knot invariants (Alexander, HOMFLY-PT) \\
+\texttt{pyvista}     & $\geq$\,0.44   & 3-D tube renders, symmetry-axis overlays \\
+\texttt{ffmpeg-python} & $\geq$\,0.2  & 4K/60fps video export \\
+\texttt{numpy}       & $\geq$\,1.26   & Data I/O, catalogue serialisation \\
+\texttt{h5py}        & $\geq$\,3.11   & HDF5 storage for orbit catalogue \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\subsection{Hardware target}
+
+The primary compute target is a single workstation equipped with an NVIDIA
+RTX\,5090 (Blackwell, 32\,GB VRAM) and 192\,GB system RAM.  Key
+implications:
+
+\begin{itemize}[leftmargin=1.8em]
+  \item The Fourier truncation limit $K$ can be pushed to $K = 256$ or beyond
+        without memory pressure, capturing highly irregular curve geometries
+        that lower-$K$ truncations would miss.
+  \item With \texttt{vmap}, a batch of $B = 8192$ random initialisations can be
+        evaluated in a single forward pass; the GPU's 3352 tensor cores
+        parallelise all $B$ action evaluations concurrently.
+  \item The 192\,GB system RAM allows the full symmetry-constraint manifolds for
+        larger $N$ to be pre-enumerated and held in RAM during search.
+\end{itemize}
+
+% ---------- 2. MATHEMATICAL ENCODING ----------
+\section{Mathematical Encoding}
+
+\subsection{Fourier representation of the curve}
+
+The single curve $\gamma : [0,T] \to \R^3$ is represented by a truncated
+real Fourier series:
+\[
+  \gamma(t) = \bfa_0
+  + \sum_{k=1}^{K} \!\left[
+      \bfa_k \cos\!\left(\tfrac{2\pi k t}{T}\right)
+    + \bfb_k \sin\!\left(\tfrac{2\pi k t}{T}\right)
+  \right],
+  \qquad \bfa_k, \bfb_k \in \R^3.
+\]
+The parameter vector is $\theta = (\bfa_0, \bfa_1, \bfb_1, \ldots,
+\bfa_K, \bfb_K) \in \R^{3(2K+1)}$.  The centre-of-mass condition
+$\sum_i \bfq_i = 0$ for all $t$ enforces $\bfa_0 = \mathbf{0}$, reducing
+$\theta \in \R^{6K}$.  The time discretisation uses $M = 8K$ uniformly spaced
+quadrature points; the action integral is approximated by the rectangle rule,
+whose error is $O(K^{-p})$ for a curve of Sobolev regularity $p$.
+
+\begin{decision}
+Default truncation: $K = 64$ for Phase\,1 searches.  Raise to $K = 128$
+for refinement and $K = 256$ for near-collision orbits flagged during Phase\,1.
+Monitor convergence via $\|\bfa_K\|, \|\bfb_K\| < 10^{-8}$.
+\end{decision}
+
+\subsection{Symmetry constraint encoding}
+
+Let $G \subset O(3) \times \Z/N\Z$ be the target symmetry group.  Each
+generator $(R, \sigma) \in G$ acts on $\theta$ by:
+\[
+  (R,\sigma) \cdot \gamma(t) = R\,\gamma\!\left(t - \sigma\,\tfrac{T}{N}\right).
+\]
+In Fourier space this becomes a \emph{linear} constraint on $\theta$.
+Concretely, applying $R$ to the coefficient vectors and shifting $t$ by
+$\sigma T/N$ multiplies mode $k$ by the phase factor $e^{2\pi i k \sigma/N}$.
+The fixed-point subspace $\Fix(G)$ is the intersection of the null spaces of
+$(I - \rho(g))$ for each generator $g \in G$, where $\rho$ is the induced
+representation on $\R^{6K}$.
+
+\subsubsection{Worked example: $C_{3v}$ with $N = 3$}
+
+The group $C_{3v}$ is generated by a $120^\circ$ rotation $R_3$ about the
+$z$-axis and a reflection $\sigma_v$ through the $xz$-plane.  With $N = 3$
+and phase shift $\sigma = 1$:
+
+\begin{enumerate}[leftmargin=1.8em]
+  \item $R_3 \cdot \gamma(t) = R_3\,\gamma(t - T/3)$: imposes on mode $k$ that
+        $R_3 \bfa_k = \bfa_k \cos(2\pi k/3) + \bfb_k \sin(2\pi k/3)$ and the
+        analogous relation for $\bfb_k$.  Only modes $k \equiv 0 \pmod{3}$ survive
+        in the $xy$-components; the $z$-components of modes $k \not\equiv 0
+        \pmod 3$ are forced to zero.
+  \item $\sigma_v \cdot \gamma(t) = \sigma_v \gamma(t)$: reflects $y \to -y$,
+        forcing $(\bfa_k)_y = 0$ and $(\bfb_k)_x = 0$ for all surviving modes.
+\end{enumerate}
+
+The net effect is that $\dim\Fix(C_{3v}) = 4K/3 + O(1)$, a reduction by
+factor $\approx 2/3$ relative to the unconstrained $6K$-dimensional space.
+Icosahedral constraints with $N = 12$ reduce the space by factor $\approx
+11/12$, leaving $O(K)$ free parameters at fixed order.
+
+\subsubsection{Implementation: constraint matrix $P_G$}
+
+For each symmetry group $G$, we precompute a projection matrix $P_G$ such
+that $\theta \in \Fix(G)$ iff $\theta = P_G \theta$.  This matrix is computed
+once at initialisation via the Reynolds operator:
+\[
+  P_G = \frac{1}{|G|} \sum_{g \in G} \rho(g).
+\]
+All initialisations are drawn as $\theta = P_G z$ for $z \sim \mathcal{N}(0,
+\sigma^2 I)$, guaranteeing they lie in $\Fix(G)$.  Gradient steps are
+projected back via $\nabla \leftarrow P_G \nabla$ after each L-BFGS update.
+
+\subsection{Action functional in JAX}
+
+\begin{lstlisting}[style=python, caption={Core action functional (JAX).}]
+import jax
+import jax.numpy as jnp
+
+def build_action(N: int, K: int, M: int, G: float = 1.0, m: float = 1.0):
+    """
+    Returns a JAX-jittable function action(theta) -> scalar.
+    theta: shape (6*K,) -- packed Fourier coefficients [a1,b1,...,aK,bK],
+           each a_k, b_k in R^3, centre-of-mass zeroed.
+    """
+    t = jnp.linspace(0, 1, M, endpoint=False)          # normalised time
+    tau = jnp.arange(1, N) / N                          # phase offsets
+
+    @jax.jit
+    def action(theta):
+        # Unpack coefficients: shape (K, 2, 3)
+        coeff = theta.reshape(K, 2, 3)
+        ks = jnp.arange(1, K + 1)[:, None]              # (K,1)
+
+        # Synthesise gamma(t): shape (M, 3)
+        cos_t = jnp.cos(2 * jnp.pi * ks * t[None, :])  # (K, M)
+        sin_t = jnp.sin(2 * jnp.pi * ks * t[None, :])  # (K, M)
+        gamma = jnp.einsum('ki,kc->ic', cos_t, coeff[:, 0, :]) \
+              + jnp.einsum('ki,kc->ic', sin_t, coeff[:, 1, :])  # (M,3)
+
+        # Kinetic term: (1/2) m |gamma_dot|^2
+        gamma_dot = jnp.einsum('k,ki,kc->ic',
+                               2*jnp.pi*ks[:, 0], -sin_t, coeff[:, 0, :]) \
+                  + jnp.einsum('k,ki,kc->ic',
+                               2*jnp.pi*ks[:, 0],  cos_t, coeff[:, 1, :])
+        kinetic = 0.5 * m * jnp.mean(jnp.sum(gamma_dot**2, axis=-1))
+
+        # Potential term: sum over phase offsets
+        def potential_shift(s):
+            cos_s = jnp.cos(2 * jnp.pi * ks * s)   # (K,)
+            sin_s = jnp.sin(2 * jnp.pi * ks * s)
+            gamma_s = jnp.einsum('k,ki,kc->ic', cos_s, cos_t, coeff[:,0,:]) \
+                    + jnp.einsum('k,ki,kc->ic', sin_s, cos_t, coeff[:,0,:]) \
+                    + jnp.einsum('k,ki,kc->ic', cos_s, sin_t, coeff[:,1,:]) \
+                    + jnp.einsum('k,ki,kc->ic', sin_s, sin_t, coeff[:,1,:])
+            diff = gamma - gamma_s                      # (M, 3)
+            r = jnp.sqrt(jnp.sum(diff**2, axis=-1) + 1e-14)
+            return -G * m**2 * jnp.mean(1.0 / r)
+
+        potential = jax.vmap(potential_shift)(tau).sum()
+        return kinetic + potential / N
+
+    return action
+\end{lstlisting}
+
+\textbf{Note on collision regularisation.} The softening term $10^{-14}$ in
+the denominator prevents gradient explosions during early optimisation but
+must be removed before final Newton--Raphson refinement.  Orbits for which
+$\min_t |\gamma(t) - \gamma(t+kT/N)| < 10^{-3}$ at convergence are flagged
+as near-collision and discarded.
+
+% ---------- 3. PHASE 1: ACTION MINIMISATION ----------
+\section{Phase 1: Action Minimisation}
+
+\subsection{Initialisation strategy}
+
+\textbf{Algorithm: Batched symmetry-constrained initialisation.}
+\begin{enumerate}[leftmargin=1.8em]
+  \item[(In)] Point group $G$, body count $N$, batch size $B$, scale $\sigma$
+  \item[(1)] Precompute Reynolds projector $P_G \in \R^{6K \times 6K}$
+  \item[(2)] Sample $Z \sim \mathcal{N}(0, \sigma^2 I_{B \times 6K})$
+  \item[(3)] $\Theta \leftarrow Z \cdot P_G^\top$ \hfill \textit{(project onto $\Fix(G)$)}
+  \item[(4)] Normalise each row: $\Theta_i \leftarrow \sigma \Theta_i / \|\Theta_i\|$
+  \item[(Out)] Batch $\Theta \in \R^{B \times 6K}$, all rows in $\Fix(G)$
+\end{enumerate}
+
+Default: $B = 8192$, $\sigma = 0.3$ (in units where $G = m = T = 1$).
+The full batch is evaluated in a single \texttt{vmap}ped forward pass.
+
+\subsection{L-BFGS via Optax}
+
+Gradient descent uses the L-BFGS implementation in \texttt{optax} with
+history length $h = 20$.  The gradient $\nabla_\theta \Action$ is provided
+exactly by \texttt{jax.grad}.  After each step, the update is projected back
+to $\Fix(G)$:
+\[
+  \theta \leftarrow P_G \bigl(\theta - \alpha \cdot \text{L-BFGS}(\nabla_\theta
+  \Action)\bigr).
+\]
+Convergence is declared when $\|\nabla_\theta \Action\|_2 < 10^{-9}$.
+
+\subsection{Candidate filtering}
+
+After optimisation, candidates are filtered by:
+\begin{enumerate}[leftmargin=1.8em]
+  \item \textbf{Action threshold}: retain only candidates with
+        $\Action < \Action_{\mathrm{planar}}(N)$, i.e.\ strictly below
+        the best known planar choreography at the same $N$.
+  \item \textbf{Planarity test}: compute the ratio of the smallest to largest
+        principal moment of the point cloud $\{\gamma(t_i)\}$.  Discard if
+        ratio $< 10^{-2}$.
+  \item \textbf{Near-collision filter}: discard if any pairwise separation
+        $< 10^{-3}$ along the refined orbit.
+  \item \textbf{Duplicate detection}: cluster retained candidates by action
+        value (tolerance $10^{-6}$) and symmetry group to remove re-discovered
+        copies.
+\end{enumerate}
+
+% ---------- 4. PHASE 2: ORBIT REFINEMENT ----------
+\section{Phase 2: Orbit Refinement}
+
+\subsection{Yoshida 6th-order symplectic integrator}
+
+Fourier-space minimisation yields an approximate periodic orbit.  It is
+refined to a true solution of the $N$-body ODE using a Yoshida 6th-order
+symplectic integrator \cite{Yoshida1990}, which preserves the symplectic
+structure and gives energy conservation error $O(\Delta t^6)$.
+
+The Yoshida coefficients $(w_0, w_1, \ldots, w_7)$ are fixed by the
+root of a specific polynomial; we use the Yoshida (1990) set\,1 values,
+stored as compile-time constants.  Step size $\Delta t = T/(200K)$.
+
+\subsection{Newton--Raphson periodicity correction}
+
+Let $\Phi_T : \R^{6N} \to \R^{6N}$ denote the time-$T$ flow map computed by
+the symplectic integrator.  We seek $\mathbf{x}^* \in \R^{6N}$ such that
+$\Phi_T(\mathbf{x}^*) = \mathbf{x}^*$.  Starting from the Fourier candidate,
+Newton--Raphson iterations:
+\[
+  \mathbf{x}^{(n+1)} = \mathbf{x}^{(n)}
+  - \left[D\Phi_T(\mathbf{x}^{(n)}) - I\right]^{-1}
+    \left[\Phi_T(\mathbf{x}^{(n)}) - \mathbf{x}^{(n)}\right]
+\]
+are iterated until $\|\Phi_T(\mathbf{x}^*) - \mathbf{x}^*\|_\infty < 10^{-12}$.
+The Jacobian $D\Phi_T$ is computed by integrating the variational equations
+alongside the orbit (Section~\ref{sec:stability}).  Typically 3--5 Newton
+steps suffice from a good Fourier initial point.
+
+\subsection{Symmetry verification}
+
+After refinement, the symmetry of the orbit is re-verified numerically:
+for each generator $(R, \sigma) \in G$, compute
+$\|R\,\bfq_1(t) - \bfq_1(t - \sigma T/N)\|_\infty$ and assert $< 10^{-9}$.
+Orbits failing this check are re-classified under their actual (smaller)
+symmetry group.
+
+% ---------- 5. PHASE 3: KNOT CLASSIFICATION ----------
+\section{Phase 3: Knot Classification Pipeline}
+
+\subsection{Spacetime trace construction}
+
+The spacetime trace $\Gamma$ is the closed curve in $\R^3$ obtained by
+``unwinding'' the time axis:
+\[
+  \Gamma(\phi) = \bigl(\gamma(T\phi/2\pi),\;
+                  R_z(\phi)\,\hat{e}_z\bigr)
+                 \in \R^3,
+  \quad \phi \in [0, 2\pi).
+\]
+In practice we embed $\Gamma$ in $S^3 \subset \R^4$ using the standard
+Hopf-type map and project to $\R^3$ via stereographic projection before
+passing to SnapPy.
+
+\subsection{Projection and crossing diagram}
+
+From the sampled curve $\Gamma$ (with $L = 2048$ sample points), we:
+\begin{enumerate}[leftmargin=1.8em]
+  \item Compute the writhe $w = \frac{1}{4\pi}\iint \frac{(\Gamma(s) -
+        \Gamma(t))}{|\Gamma(s) - \Gamma(t)|^3} \cdot (d\Gamma(s) \times
+        d\Gamma(t))$ numerically (discretised Gauss integral).
+  \item Select a projection direction minimising the number of crossings
+        (sampled over 200 random directions on $S^2$).
+  \item Compute the Gauss code from the ordered crossing sequence and
+        convert to Dowker--Thistlethwaite (DT) notation.
+\end{enumerate}
+
+\subsection{Polynomial invariants via SnapPy}
+
+\begin{lstlisting}[style=python, caption={Knot invariant computation.}]
+import snappy
+
+def compute_knot_invariants(dt_notation: str) -> dict:
+    """
+    Given DT notation of the spacetime trace, compute invariants.
+    """
+    L = snappy.Link(dt_notation)
+    K = L.components[0] if L.is_knot() else None
+
+    results = {
+        'alexander': str(L.alexander_polynomial()),
+        'homfly_pt': str(L.homfly_polynomial()),
+        'determinant': L.determinant(),
+        'signature': L.signature(),
+    }
+    if K is not None:
+        M = K.complement()
+        results['hyperbolic_volume'] = M.volume() if M.solution_type() == \
+            'all_positively_oriented_tetrahedra' else None
+    return results
+\end{lstlisting}
+
+% ---------- 6. PHASE 4: STABILITY ----------
+\section{Phase 4: Stability Analysis}
+\label{sec:stability}
+
+\subsection{Variational equations}
+
+The linearised equations of motion for a displacement $\delta\mathbf{x}(t)$
+from the reference orbit $\mathbf{x}^*(t)$ are:
+\[
+  \delta\dot{\mathbf{x}} = J(t)\,\delta\mathbf{x},
+  \qquad
+  J_{ij}(t) = \frac{\partial^2 H}{\partial x_i \partial x_j}\bigg|_{\mathbf{x}^*(t)},
+\]
+where $H$ is the $N$-body Hamiltonian.  These are integrated alongside the
+orbit as a $6N \times 6N$ matrix ODE, yielding the fundamental matrix
+$\Phi(t)$.  The monodromy matrix is $M = \Phi(T)$.
+
+\begin{decision}
+The Jacobian $J(t)$ is computed via \texttt{jax.hessian} of the Hamiltonian
+at each timestep rather than by finite differencing, ensuring exact second
+derivatives.
+\end{decision}
+
+\subsection{Floquet classification}
+
+Eigenvalues of $M$ are classified as:
+\begin{center}
+\begin{tabular}{lll}
+\toprule
+\textbf{Type} & \textbf{Condition} & \textbf{Interpretation} \\
+\midrule
+Elliptic         & $|\lambda| = 1$, $\lambda \notin \R$  & Linearly stable mode \\
+Hyperbolic       & $\lambda \in \R$, $|\lambda| \neq 1$  & Unstable mode \\
+Complex-hyp.     & $|\lambda| \neq 1$, $\lambda \notin \R$ & Unstable, spiralling \\
+Trivial          & $\lambda = 1$ (multiplicity $\geq 4$) & Symmetry-mandated \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+An orbit is declared \emph{linearly stable} if all non-trivial eigenvalues
+are elliptic.  The four trivial unit eigenvalues arise from time-translation
+and spatial-translation symmetry.
+
+\subsection{Lyapunov exponents}
+
+For linearly unstable orbits, the leading Lyapunov exponent $\lambda_1$
+is estimated by the standard QR-renormalisation method over $10^4$ periods.
+
+% ---------- 7. VISUALISATION ----------
+\section{Phase 5: Visualisation Pipeline}
+
+\subsection{Tube rendering}
+
+Orbital traces are rendered as smooth tubes in $\R^3$ using PyVista:
+\begin{itemize}[leftmargin=1.8em]
+  \item \textbf{Tube radius}: $0.02 \times$ characteristic orbit scale.
+  \item \textbf{Colour map}: the tube is coloured by arclength parameter to
+        make the body's progression visually legible.
+  \item \textbf{Symmetry axes}: rotation axes are drawn as semi-transparent
+        cylinders; mirror planes as translucent discs.
+  \item \textbf{Knot diagram inset}: a 2-D knot diagram of the spacetime trace
+        is composited as an inset in the lower-right corner of each render.
+\end{itemize}
+
+\subsection{Video export}
+
+\begin{decision}
+Output format: \texttt{H.264}, 3840$\times$2160 (4K), 60\,fps,
+CRF\,18 (visually lossless). Container: \texttt{.mp4}.
+\end{decision}
+
+The animation shows the bodies moving along the pre-rendered tube, with a
+camera orbit completing one revolution per two choreographic periods.
+The \texttt{ffmpeg-python} wrapper handles frame assembly; PyVista's
+off-screen renderer (\texttt{pyvista.start\_xvfb()}) is used in the
+headless VM environment.
+
+\subsection{Static publication figures}
+
+Each orbit additionally produces a static 300\,dpi PDF figure (via PyVista's
+\texttt{save\_graphic}) suitable for journal submission: three orthographic
+views (top, front, side) plus the 3/4 perspective view, assembled on a
+$2\times 2$ grid.
+
+% ---------- 8. CATALOGUE FORMAT ----------
+\section{Catalogue Format}
+
+All discovered orbits are stored in a single HDF5 file \texttt{catalogue.h5}
+with the following schema:
+
+\begin{center}
+\begin{tabular}{lll}
+\toprule
+\textbf{Dataset} & \textbf{Shape} & \textbf{Content} \\
+\midrule
+\texttt{orbits/\{id\}/q}         & $(M, N, 3)$  & Positions at $M$ timesteps \\
+\texttt{orbits/\{id\}/p}         & $(M, N, 3)$  & Momenta \\
+\texttt{orbits/\{id\}/action}    & scalar       & Action value \\
+\texttt{orbits/\{id\}/period}    & scalar       & Period $T$ \\
+\texttt{orbits/\{id\}/symgroup}  & string       & Sch\"onflies label \\
+\texttt{orbits/\{id\}/knot}      & string       & Knot name or DT notation \\
+\texttt{orbits/\{id\}/alexander} & string       & Alexander polynomial \\
+\texttt{orbits/\{id\}/homfly}    & string       & HOMFLY-PT polynomial \\
+\texttt{orbits/\{id\}/floquet}   & $(6N,)$      & Monodromy eigenvalues \\
+\texttt{orbits/\{id\}/stable}    & bool         & Linear stability flag \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Initial conditions are stored to full IEEE\,754 double precision (64-bit).
+The catalogue is accompanied by a \texttt{README.md} and a Python reader
+module \texttt{choreo\_catalogue.py} for programmatic access.
+
+% ---------- 9. MILESTONES ----------
+\section{Development Milestones}
+
+\begin{center}
+\begin{tabular}{clc}
+\toprule
+\textbf{Milestone} & \textbf{Deliverable} & \textbf{Target} \\
+\midrule
+M0 & Environment setup, JAX GPU verify, test on figure-8 & Week 1 \\
+M1 & $C_{3v}$ and $D_3$ search complete ($N=3$)           & Week 2 \\
+M2 & All $N=3$ and $N=4$ point groups searched            & Week 4 \\
+M3 & Knot pipeline validated; classification of M1/M2 results & Week 5 \\
+M4 & Stability analysis complete for all discovered orbits & Week 6 \\
+M5 & $N=6,12$ (tetrahedral, octahedral) search complete   & Week 9 \\
+M6 & Icosahedral $N=12$ attempt                           & Week 11 \\
+M7 & Visualisation pipeline, 4K renders, static figures   & Week 12 \\
+M8 & Catalogue finalised, toolkit released, paper drafted & Week 14 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+% ---------- REFERENCES ----------
+\begin{thebibliography}{9}
+
+\bibitem{Yoshida1990}
+H.~Yoshida,
+\textit{Construction of higher order symplectic integrators},
+Phys.\ Lett.\ A \textbf{150} (1990), 262--268.
+
+\bibitem{CM2000}
+A.~Chenciner and R.~Montgomery,
+\textit{A remarkable periodic solution of the three-body problem in the case of equal masses},
+Ann.\ Math.\ \textbf{152} (2000), 881--901.
+
+\bibitem{Simo2002}
+C.~Sim\'o,
+\textit{New families of solutions in $N$-body problems},
+in \textit{European Congress of Mathematics}, Birkh\"auser, Basel, 2001, pp.\ 101--115.
+
+\bibitem{Palais1979}
+R.~S.~Palais,
+\textit{The principle of symmetric criticality},
+Commun.\ Math.\ Phys.\ \textbf{69} (1979), 19--30.
+
+\end{thebibliography}
+
+\end{document}
