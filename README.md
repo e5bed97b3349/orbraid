@@ -44,7 +44,7 @@ Active development. See [Issues](../../issues) and [Milestones](../../milestones
 
 | Milestone | Status |
 |-----------|--------|
-| M0: Environment & validation | 🔲 Not started |
+| M0: Environment & validation | ✅ Complete |
 | M1: C₃ᵥ / D₃ search (N=3) | 🔲 Not started |
 | M2: All N=3 and N=4 groups | 🔲 Not started |
 | M3: Knot pipeline | 🔲 Not started |
